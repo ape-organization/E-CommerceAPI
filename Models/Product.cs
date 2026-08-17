@@ -10,7 +10,10 @@ namespace PharmacyAPI.Models
         public string? ImageUrl { get; set; }
         public bool IsDeleted { get; set; } = false;
 
-        public int CategoryId { get; set; }
-        public Category Category { get; set; } = null!;
+        public ICollection<SubCategory> SubCategories { get; set; }
+       = new List<SubCategory>();
+
+        public ICollection<OrderItem> OrderItems { get; set; }
+            = new List<OrderItem>();
     }
 }

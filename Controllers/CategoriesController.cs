@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
-using PharmacyAPI.DTOs;
 using PharmacyAPI.Models;
 using PharmacyAPI.Services;
 

@@ -34,6 +34,8 @@ builder.Services.AddScoped<JwtHandler>();
 //all services 
 builder.Services.AddScoped<IProductService,ProductService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
+builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

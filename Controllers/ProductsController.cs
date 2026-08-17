@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
-using PharmacyAPI.DTOs;
 using PharmacyAPI.Models;
+using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Services;
 using System.IO;
 
@@ -15,75 +15,189 @@ namespace PharmacyAPI.Controllers
     {
 
         private readonly PharmacyDbContext _context;
-        private readonly IProductService productService;
+        private readonly IProductService _productService;
 
         public ProductsController( 
             IProductService product, PharmacyDbContext context
             )
         {
-            productService = product;
+            _productService = product;
             _context = context;
            
         }
 
+        // ============================================
+        // GET ALL PRODUCTS
+        // GET: api/products
+        // ============================================
+
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
+        public async Task<IActionResult> GetProducts()
         {
-            var products = await productService.GetProducts();
+            var products = await _productService.GetProducts();
 
-            return products;
+            return Ok(products);
         }
 
-        [HttpGet("checkProductExists/{productName}")]
-        [Authorize]
-        public async Task<ActionResult<bool>> CheckProductExists(string productName)
-        {
-            var check = await productService.CheckProductExists( productName);
 
-            return check;
-        }
-        [HttpGet("{id}")]
-        [Authorize]
-        public async Task<ActionResult<ProductDto>> GetProduct(int id)
+        // ============================================
+        // GET PRODUCT BY ID
+        // GET: api/products/5
+        // ============================================
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetProduct(int id)
         {
-            var p = await productService.GetProduct(id);
-            return p;
+            var product = await _productService.GetProduct(id);
+
+            if (product == null)
+            {
+                return NotFound(new
+                {
+                    message = "Product not found."
+                });
+            }
+
+            return Ok(product);
         }
+
+
+        // ============================================
+        // CREATE PRODUCT
+        // POST: api/products
+        // Content-Type: multipart/form-data
+        // ============================================
 
         [HttpPost]
-        [Authorize]
-        public async Task<ActionResult<ProductDto>> CreateProduct([FromForm] ProductDto dto)
+        public async Task<IActionResult> CreateProduct(
+            [FromForm] ProductDto dto)
         {
-            var product = await productService.CreateProduct(dto);
-            return Ok(product);
+            try
+            {
+                var product =
+                    await _productService.CreateProduct(dto);
+
+                return CreatedAtAction(
+                    nameof(GetProduct),
+                    new { id = product.Id },
+                    product);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    message = ex.Message
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    message = ex.Message
+                });
+            }
         }
 
-        [HttpPut("{id}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateProduct(int id, [FromForm] UpdateProductDto dto)
+
+        // ============================================
+        // UPDATE PRODUCT
+        // PUT: api/products/5
+        // Content-Type: multipart/form-data
+        // ============================================
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateProduct(
+            int id,
+            [FromForm] UpdateProductDto dto)
         {
+            try
+            {
+                var updated =
+                    await _productService.UpdateProduct(
+                        id,
+                        dto);
 
-            
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
+                if (!updated)
+                {
+                    return NotFound(new
+                    {
+                        message = "Product not found."
+                    });
+                }
 
-            
+                var product =
+                    await _productService.GetProduct(id);
 
-          await productService.UpdateProduct(id,dto,product);
-            return Ok(product);
+                return Ok(product);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    message = ex.Message
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    message = ex.Message
+                });
+            }
         }
 
-        [HttpDelete("{id}")]
-        [Authorize]
+
+        // ============================================
+        // DELETE PRODUCT
+        // DELETE: api/products/5
+        // ============================================
+
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
-         await productService.DeleteProduct(id,product);
-            return NoContent();
+            var deleted =
+                await _productService.DeleteProduct(id);
+
+            if (!deleted)
+            {
+                return NotFound(new
+                {
+                    message = "Product not found."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Product deleted successfully."
+            });
         }
 
-      
+
+        // ============================================
+        // CHECK PRODUCT NAME
+        // GET: api/products/check-name?name=Panadol
+        // ============================================
+
+        [HttpGet("check-name")]
+        public async Task<IActionResult> CheckProductExists(
+            [FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest(new
+                {
+                    message = "Product name is required."
+                });
+            }
+
+            var exists =
+                await _productService.CheckProductExists(name);
+
+            return Ok(new
+            {
+                exists
+            });
+        }
     }
 }

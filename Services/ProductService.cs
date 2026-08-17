@@ -1,139 +1,380 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
-using PharmacyAPI.DTOs;
 using PharmacyAPI.Models;
+using PharmacyAPI.Models.RequestsModels;
 
 namespace PharmacyAPI.Services
 {
     public interface IProductService
     {
-        Task<List<ProductDto>> GetProducts();
-        Task<ProductDto> GetProduct(int id);
-        Task<ProductDto> CreateProduct([FromForm] ProductDto dto);
-        Task UpdateProduct(int id, [FromForm] UpdateProductDto dto, Product product);
-        Task DeleteProduct(int id, Product product);
-        Task<bool> CheckProductExists(string name);
+        Task<List<ProductResponseDto>> GetProducts();
 
+        Task<ProductResponseDto?> GetProduct(int id);
+
+        Task<ProductDto> CreateProduct(ProductDto dto);
+
+        Task<bool> UpdateProduct(
+            int id,
+            UpdateProductDto dto);
+
+        Task<bool> DeleteProduct(int id);
+
+        Task<bool> CheckProductExists(string name);
     }
-    public class ProductService:IProductService
+
+
+    public class ProductService : IProductService
     {
         private readonly PharmacyDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        public ProductService(PharmacyDbContext context,
+
+        public ProductService(
+            PharmacyDbContext context,
             IWebHostEnvironment environment)
         {
             _context = context;
             _environment = environment;
         }
-        public async Task<List<ProductDto>> GetProducts()
-        {
-            var products = await _context.Products
-    .Where(p => !p.IsDeleted)
-  .Select(p => new ProductDto
-  {
-      Id = p.Id,
-      Name = p.Name,
-      Description = p.Description,
-      Price = p.Price,
-      StockQuantity = p.StockQuantity,
-      ImageUrl = p.ImageUrl,
-      CategoryId = p.CategoryId,
-      CategoryName = p.Category.Name
-  })
-    .ToListAsync();
 
-            return products;
+
+        // ============================================
+        // GET ALL PRODUCTS
+        // ============================================
+
+        public async Task<List<ProductResponseDto>> GetProducts()
+        {
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted)
+                .Select(p => new ProductResponseDto
+                {
+                    Id = p.Id,
+
+                    Name = p.Name,
+
+                    Description = p.Description,
+
+                    Price = p.Price,
+
+                    StockQuantity = p.StockQuantity,
+
+                    ImageUrl = p.ImageUrl,
+
+                    SubCategories = p.SubCategories
+                        .Where(sc => !sc.IsDeleted)
+                        .Select(sc => new SubCategoryResponseDto
+                        {
+                            Id = sc.Id,
+
+                            Name = sc.Name,
+
+                            CategoryId = sc.CategoryId,
+
+                            CategoryName = sc.Category.Name
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
         }
 
-        public async Task<ProductDto> GetProduct(int id)
-        {
-            var p = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.Id == id
-            && p.IsDeleted == false);
-            if (p == null) return(null) ;
+        // ============================================
+        // GET PRODUCT BY ID
+        // ============================================
 
-            return new ProductDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Description = p.Description,
-                Price = p.Price,
-                StockQuantity = p.StockQuantity,
-                ImageUrl = p.ImageUrl,
-                CategoryId = p.CategoryId,
-                CategoryName = p.Category.Name
-            };
+        public async Task<ProductResponseDto?> GetProduct(int id)
+        {
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p =>
+                    p.Id == id &&
+                    !p.IsDeleted)
+                .Select(p => new ProductResponseDto
+                {
+                    Id = p.Id,
+
+                    Name = p.Name,
+
+                    Description = p.Description,
+
+                    Price = p.Price,
+
+                    StockQuantity = p.StockQuantity,
+
+                    ImageUrl = p.ImageUrl,
+
+                    SubCategories = p.SubCategories
+                        .Where(sc => !sc.IsDeleted)
+                        .Select(sc => new SubCategoryResponseDto
+                        {
+                            Id = sc.Id,
+
+                            Name = sc.Name,
+
+                            CategoryId = sc.CategoryId,
+
+                            CategoryName = sc.Category.Name
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
         }
+        // ============================================
+        // CHECK PRODUCT EXISTS
+        // ============================================
 
         public async Task<bool> CheckProductExists(string name)
         {
-            var p = await _context.Products.FirstOrDefaultAsync(p => p.Name == name
-            && p.IsDeleted == false);
-            if (p == null) return false;
-
-            return true;
+            return await _context.Products
+                .AnyAsync(p =>
+                    !p.IsDeleted &&
+                    p.Name.ToLower() == name.ToLower());
         }
 
-        public async Task<ProductDto> CreateProduct([FromForm] ProductDto dto)
+
+        // ============================================
+        // CREATE PRODUCT
+        // ============================================
+
+        public async Task<ProductDto> CreateProduct(
+            ProductDto dto)
         {
+            // Check product name
+            var nameExists = await CheckProductExists(dto.Name);
+
+            if (nameExists)
+                throw new InvalidOperationException(
+                    "A product with this name already exists.");
+
+
+            // Validate subcategories
+            var subCategories = await _context.SubCategories
+                .Where(sc =>
+                    dto.SubCategoryIds.Contains(sc.Id) &&
+                    !sc.IsDeleted)
+                .ToListAsync();
+
+
+            if (subCategories.Count != dto.SubCategoryIds.Distinct().Count())
+            {
+                throw new KeyNotFoundException(
+                    "One or more subcategories were not found.");
+            }
+
+
+            // Save image
             string? imageUrl = null;
+
             if (dto.Image != null)
             {
                 imageUrl = await SaveImage(dto.Image);
             }
 
+
+            // Create product
             var product = new Product
             {
-                Name = dto.Name,
+                Name = dto.Name.Trim(),
+
                 Description = dto.Description,
+
                 Price = dto.Price,
+
                 StockQuantity = dto.StockQuantity,
-                CategoryId = dto.CategoryId,
+
                 ImageUrl = imageUrl
             };
 
+
+            // Many-to-many relationship
+            foreach (var subCategory in subCategories)
+            {
+                product.SubCategories.Add(subCategory);
+            }
+
+
             _context.Products.Add(product);
+
             await _context.SaveChangesAsync();
 
-            return dto;
+
+            // Return actual saved product
+            return new ProductDto
+            {
+                Id = product.Id,
+
+                Name = product.Name,
+
+                Description = product.Description,
+
+                Price = product.Price,
+
+                StockQuantity = product.StockQuantity,
+
+                ImageUrl = product.ImageUrl,
+
+                SubCategoryIds = product.SubCategories
+                    .Select(sc => sc.Id)
+                    .ToList()
+            };
         }
 
-        public async Task UpdateProduct(int id, [FromForm] UpdateProductDto dto,Product product)
-        {
-        
 
+        // ============================================
+        // UPDATE PRODUCT
+        // ============================================
+
+        public async Task<bool> UpdateProduct(
+            int id,
+            UpdateProductDto dto)
+        {
+            var product = await _context.Products
+                .Include(p => p.SubCategories)
+                .FirstOrDefaultAsync(p =>
+                    p.Id == id &&
+                    !p.IsDeleted);
+
+
+            if (product == null)
+                return false;
+
+
+            // Check duplicate name
+            var nameExists = await _context.Products
+                .AnyAsync(p =>
+                    p.Id != id &&
+                    !p.IsDeleted &&
+                    p.Name.ToLower() == dto.Name.ToLower());
+
+
+            if (nameExists)
+            {
+                throw new InvalidOperationException(
+                    "A product with this name already exists.");
+            }
+
+
+            // Validate subcategories
+            var subCategoryIds =
+                dto.SubCategoryIds
+                    .Distinct()
+                    .ToList();
+
+
+            var subCategories = await _context.SubCategories
+                .Where(sc =>
+                    subCategoryIds.Contains(sc.Id) &&
+                    !sc.IsDeleted)
+                .ToListAsync();
+
+
+            if (subCategories.Count != subCategoryIds.Count)
+            {
+                throw new KeyNotFoundException(
+                    "One or more subcategories were not found.");
+            }
+
+
+            // Update image
             if (dto.Image != null)
             {
-                product.ImageUrl = await SaveImage(dto.Image);
+                product.ImageUrl =
+                    await SaveImage(dto.Image);
             }
 
-            product.Name = dto.Name;
+
+            // Update basic properties
+            product.Name = dto.Name.Trim();
+
             product.Description = dto.Description;
+
             product.Price = dto.Price;
+
             product.StockQuantity = dto.StockQuantity;
-            product.CategoryId = dto.CategoryId;
 
-            await _context.SaveChangesAsync();
-          
-        }
 
-        public async Task DeleteProduct(int id,Product product)
-        {
-            
-            product.IsDeleted = true;
-            _context.Products.Update(product);
-            await _context.SaveChangesAsync();
-         
-        }
+            // ============================================
+            // UPDATE MANY-TO-MANY RELATIONSHIP
+            // ============================================
 
-        private async Task<string> SaveImage(IFormFile image)
-        {
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-            var filePath = Path.Combine(_environment.WebRootPath, "images", fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            product.SubCategories.Clear();
+
+            foreach (var subCategory in subCategories)
             {
-                await image.CopyToAsync(stream);
+                product.SubCategories.Add(subCategory);
             }
+
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+
+        // ============================================
+        // DELETE PRODUCT
+        // ============================================
+
+        public async Task<bool> DeleteProduct(int id)
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p =>
+                    p.Id == id &&
+                    !p.IsDeleted);
+
+
+            if (product == null)
+                return false;
+
+
+            // Soft delete only
+            product.IsDeleted = true;
+
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+
+        // ============================================
+        // SAVE IMAGE
+        // ============================================
+
+        private async Task<string> SaveImage(
+            IFormFile image)
+        {
+            var folder =
+                Path.Combine(
+                    _environment.WebRootPath,
+                    "images");
+
+
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+
+            var fileName =
+                Guid.NewGuid().ToString()
+                + Path.GetExtension(image.FileName);
+
+
+            var filePath =
+                Path.Combine(
+                    folder,
+                    fileName);
+
+
+            await using var stream =
+                new FileStream(
+                    filePath,
+                    FileMode.Create);
+
+
+            await image.CopyToAsync(stream);
+
+
             return "/images/" + fileName;
         }
     }

@@ -6,7 +6,7 @@ namespace PharmacyAPI.Models
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public User User { get; set; } = null!;
+      //  public User User { get; set; } = null!;
         public bool IsDeleted { get; set; } = false;
 
         public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();

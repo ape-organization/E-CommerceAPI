@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
-using PharmacyAPI.DTOs;
 using PharmacyAPI.Models;
+using PharmacyAPI.Models.RequestsModels;
+using PharmacyAPI.Services;
 
 namespace PharmacyAPI.Controllers
 {
@@ -10,74 +11,182 @@ namespace PharmacyAPI.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly PharmacyDbContext _context;
+        private readonly IOrderService _orderService;
 
-        public OrdersController(PharmacyDbContext context)
+        public OrdersController(
+            IOrderService orderService)
         {
-            _context = context;
+            _orderService = orderService;
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<ActionResult<IEnumerable<OrderDto>>> GetUserOrders(int userId)
-        {
-            return await _context.Orders
-                .Where(o => o.UserId == userId)
-                .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
-                .Select(o => new OrderDto
-                {
-                    Id = o.Id,
-                    OrderDate = o.OrderDate,
-                    TotalAmount = o.TotalAmount,
-                    Status = o.Status,
-                    Items = o.OrderItems.Select(oi => new OrderItemDto
-                    {
-                        ProductId = oi.ProductId,
-                        ProductName = oi.Product.Name,
-                        Quantity = oi.Quantity,
-                        UnitPrice = oi.UnitPrice
-                    }).ToList()
-                }).ToListAsync();
-        }
+
+        // ============================================
+        // CREATE ORDER
+        // POST: api/orders
+        // ============================================
 
         [HttpPost]
-        public async Task<ActionResult<OrderDto>> CreateOrder(CreateOrderDto dto)
+        public async Task<IActionResult> CreateOrder(
+            [FromBody] CreateOrderDto dto)
         {
-            var cart = await _context.Carts
-                .Include(c => c.CartItems)
-                .ThenInclude(ci => ci.Product)
-                .FirstOrDefaultAsync(c => c.UserId == dto.UserId);
-
-            if (cart == null || !cart.CartItems.Any())
-                return BadRequest("Cart is empty");
-
-            var order = new Order
+            try
             {
-                UserId = dto.UserId,
-                TotalAmount = cart.CartItems.Sum(ci => ci.Quantity * ci.Product.Price),
-                OrderDate = DateTime.UtcNow,
-                Status = "Pending"
-            };
+                var order =
+                    await _orderService.CreateOrder(dto);
 
-            foreach (var item in cart.CartItems)
+                return CreatedAtAction(
+                    nameof(GetOrder),
+                    new { id = order.Id },
+                    order);
+            }
+            catch (KeyNotFoundException ex)
             {
-                order.OrderItems.Add(new OrderItem
+                return NotFound(new
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.Product.Price
+                    message = ex.Message
                 });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
 
-                // Update stock
-                item.Product.StockQuantity -= item.Quantity;
+
+        // ============================================
+        // GET ALL ORDERS
+        // GET: api/orders
+        // ============================================
+
+        [HttpGet]
+        public async Task<IActionResult> GetOrders()
+        {
+            var orders =
+                await _orderService.GetOrders();
+
+            return Ok(orders);
+        }
+
+
+        // ============================================
+        // GET ORDER
+        // GET: api/orders/5
+        // ============================================
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetOrder(int id)
+        {
+            var order =
+                await _orderService.GetOrder(id);
+
+            if (order == null)
+            {
+                return NotFound(new
+                {
+                    message = "Order not found."
+                });
             }
 
-            _context.Orders.Add(order);
-            _context.CartItems.RemoveRange(cart.CartItems);
-            
-            await _context.SaveChangesAsync();
+            return Ok(order);
+        }
 
-            return CreatedAtAction(nameof(GetUserOrders), new { userId = dto.UserId }, new OrderDto { Id = order.Id });
+
+        // ============================================
+        // GET CLIENT ORDERS
+        // GET: api/orders/client/5
+        // ============================================
+
+        [HttpGet("client/{clientId:int}")]
+        public async Task<IActionResult> GetClientOrders(
+            int clientId)
+        {
+            var orders =
+                await _orderService.GetOrdersByClient(
+                    clientId);
+
+            return Ok(orders);
+        }
+
+
+        // ============================================
+        // UPDATE STATUS
+        // PUT: api/orders/5/status
+        // ============================================
+
+        [HttpPut("{id:int}/status")]
+        public async Task<IActionResult> UpdateStatus(
+            int id,
+            [FromBody] string status)
+        {
+            try
+            {
+                var result =
+                    await _orderService.UpdateOrderStatus(
+                        id,
+                        status);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        message = "Order not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    message =
+                        "Order status updated successfully."
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        // ============================================
+        // CANCEL ORDER
+        // PUT: api/orders/5/cancel
+        // ============================================
+
+        [HttpPut("{id:int}/cancel")]
+        public async Task<IActionResult> CancelOrder(
+            int id)
+        {
+            try
+            {
+                var result =
+                    await _orderService.CancelOrder(id);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        message = "Order not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    message =
+                        "Order cancelled successfully."
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
         }
     }
 }
