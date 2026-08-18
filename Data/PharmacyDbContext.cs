@@ -46,9 +46,13 @@ namespace PharmacyAPI.Data
 
             // Client -> Orders
             modelBuilder.Entity<Client>()
-                .HasMany(c => c.Orders)
-                .WithOne(o => o.Client)
-                .HasForeignKey(o => o.ClientId)
+       .HasIndex(x => x.PhoneNumber)
+       .IsUnique();
+
+            modelBuilder.Entity<Client>()
+                .HasMany(x => x.Orders)
+                .WithOne(x => x.Client)
+                .HasForeignKey(x => x.ClientId)
                 .OnDelete(DeleteBehavior.Restrict);
 
 

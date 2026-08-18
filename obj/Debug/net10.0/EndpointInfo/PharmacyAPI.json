@@ -193,6 +193,29 @@
         }
       }
     },
+    "/api/Clients/by-phone/{phone}": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
     "/api/Orders": {
       "post": {
         "tags": [
@@ -1353,17 +1376,22 @@
             "type": "string",
             "nullable": true
           },
-          "email": {
+          "address": {
             "type": "string",
             "nullable": true
           },
-          "address": {
+          "email": {
             "type": "string",
             "nullable": true
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "orders": {
             "type": "array",
@@ -1375,10 +1403,10 @@
         },
         "additionalProperties": false
       },
-      "CreateOrderDto": {
+      "ClientDto": {
         "type": "object",
         "properties": {
-          "clientName": {
+          "name": {
             "type": "string",
             "nullable": true
           },
@@ -1386,13 +1414,22 @@
             "type": "string",
             "nullable": true
           },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
           "address": {
             "type": "string",
             "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "$ref": "#/components/schemas/ClientDto"
           },
           "items": {
             "type": "array",

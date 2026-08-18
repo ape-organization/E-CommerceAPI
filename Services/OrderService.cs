@@ -8,7 +8,7 @@ namespace PharmacyAPI.Services
 {
     public interface IOrderService
     {
-        Task<OrderDto> CreateOrder(CreateOrderDto dto);
+        Task<Order> CreateOrder(CreateOrderDto dto);
 
         Task<OrderDto?> GetOrder(int id);
 
@@ -36,162 +36,116 @@ namespace PharmacyAPI.Services
         // CREATE ORDER
         // ============================================
 
-        public async Task<OrderDto> CreateOrder(
-            CreateOrderDto dto)
+        public async Task<Order> CreateOrder(CreateOrderDto dto)
         {
-            if (dto.Items == null || !dto.Items.Any())
-            {
+            if (dto.Client == null)
                 throw new InvalidOperationException(
-                    "Order must contain at least one product.");
-            }
+                    "Client information is required.");
 
+            if (string.IsNullOrWhiteSpace(dto.Client.PhoneNumber))
+                throw new InvalidOperationException(
+                    "Client phone number is required.");
 
-            // ============================================
-            // FIND OR CREATE CLIENT
-            // ============================================
+            if (dto.Items == null || !dto.Items.Any())
+                throw new InvalidOperationException(
+                    "Order must contain at least one item.");
 
+            // Find client by phone
             var client = await _context.Clients
-                .FirstOrDefaultAsync(c =>
-                    c.PhoneNumber == dto.PhoneNumber);
+                .FirstOrDefaultAsync(x =>
+                    x.PhoneNumber == dto.Client.PhoneNumber);
 
-
+            // Create client if not found
             if (client == null)
             {
                 client = new Client
                 {
-                    Name = dto.ClientName.Trim(),
-
-                    PhoneNumber = dto.PhoneNumber.Trim(),
-
-                    Email = dto.Email,
-
-                    Address = dto.Address
+                    Name = dto.Client.Name,
+                    PhoneNumber = dto.Client.PhoneNumber,
+                    Address = dto.Client.Address,
+                    Email = dto.Client.Email,
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 _context.Clients.Add(client);
 
+                // We need the Client.Id before creating the Order
                 await _context.SaveChangesAsync();
             }
             else
             {
-                // Update latest customer information
-                client.Name = dto.ClientName.Trim();
-
-                client.Email = dto.Email;
-
-                client.Address = dto.Address;
+                // Update client information
+                client.Name = dto.Client.Name;
+                client.Address = dto.Client.Address;
+                client.Email = dto.Client.Email;
+                client.UpdatedAt = DateTime.UtcNow;
             }
 
-
-            // ============================================
-            // GET PRODUCTS
-            // ============================================
-
-            var productIds = dto.Items
-                .Select(i => i.ProductId)
-                .Distinct()
-                .ToList();
-
-
-            var products = await _context.Products
-                .Where(p =>
-                    productIds.Contains(p.Id) &&
-                    !p.IsDeleted)
-                .ToListAsync();
-
-
-            if (products.Count != productIds.Count)
-            {
-                throw new KeyNotFoundException(
-                    "One or more products were not found.");
-            }
-
-
-            // ============================================
-            // CREATE ORDER
-            // ============================================
-
+            // Create Order
             var order = new Order
             {
                 ClientId = client.Id,
-
                 OrderDate = DateTime.UtcNow,
-
                 Status = OrderStatus.Pending,
+                TotalAmount = 0,
 
-                TotalAmount = 0
+                // Important: let EF Core manage the relationship
+                Items = new List<OrderItem>()
             };
 
+            decimal total = 0;
 
-            decimal totalAmount = 0;
-
-
-            // ============================================
-            // CREATE ORDER ITEMS
-            // ============================================
-
-            foreach (var item in dto.Items)
+            foreach (var itemDto in dto.Items)
             {
-                if (item.Quantity <= 0)
+                if (itemDto.Quantity <= 0)
                 {
                     throw new InvalidOperationException(
-                        "Product quantity must be greater than zero.");
+                        "Quantity must be greater than zero.");
                 }
 
+                var product = await _context.Products
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == itemDto.ProductId &&
+                        !x.IsDeleted);
 
-                var product = products
-                    .First(p => p.Id == item.ProductId);
-
-
-                if (product.StockQuantity < item.Quantity)
+                if (product == null)
                 {
-                    throw new InvalidOperationException(
-                        $"Not enough stock for product '{product.Name}'.");
+                    throw new KeyNotFoundException(
+                        $"Product {itemDto.ProductId} not found.");
                 }
-
 
                 var unitPrice = product.Price;
 
-                var itemTotal =
-                    unitPrice * item.Quantity;
-
+                var subtotal = unitPrice * itemDto.Quantity;
 
                 var orderItem = new OrderItem
                 {
                     ProductId = product.Id,
-
-                    Quantity = item.Quantity,
-
+                    Quantity = itemDto.Quantity,
                     UnitPrice = unitPrice
                 };
 
-
+                // IMPORTANT:
+                // Don't set OrderId manually.
+                // Add the item to the Order's collection.
                 order.Items.Add(orderItem);
 
-
-                totalAmount += itemTotal;
-
-
-                // Reduce stock
-                product.StockQuantity -= item.Quantity;
+                total += subtotal;
             }
 
+            order.TotalAmount = total;
 
-            order.TotalAmount = totalAmount;
-
-
+            // Add the complete object graph
             _context.Orders.Add(order);
 
-
+            // EF will:
+            // 1. Insert Order
+            // 2. Get generated Order.Id
+            // 3. Insert OrderItems with the correct OrderId
             await _context.SaveChangesAsync();
 
-
-            return await GetOrder(order.Id)
-                ?? throw new InvalidOperationException(
-                    "Order could not be created.");
+            return order;
         }
-
-
         // ============================================
         // GET ALL ORDERS
         // ============================================

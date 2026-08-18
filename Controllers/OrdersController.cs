@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
@@ -26,9 +27,16 @@ namespace PharmacyAPI.Controllers
         // ============================================
 
         [HttpPost]
+        [AllowAnonymous]
+
         public async Task<IActionResult> CreateOrder(
-            [FromBody] CreateOrderDto dto)
+       [FromBody] CreateOrderDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             try
             {
                 var order =
@@ -54,8 +62,6 @@ namespace PharmacyAPI.Controllers
                 });
             }
         }
-
-
         // ============================================
         // GET ALL ORDERS
         // GET: api/orders
