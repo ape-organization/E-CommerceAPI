@@ -153,6 +153,22 @@ namespace PharmacyAPI.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "role-user",
+                            ConcurrencyStamp = "11111111-1111-1111-1111-111111111111",
+                            Name = "User",
+                            NormalizedName = "USER"
+                        },
+                        new
+                        {
+                            Id = "role-admin",
+                            ConcurrencyStamp = "22222222-2222-2222-2222-222222222222",
+                            Name = "Admin",
+                            NormalizedName = "ADMIN"
+                        });
                 });
 
             modelBuilder.Entity("PharmacyAPI.Models.Authentication.ApplicationUser", b =>

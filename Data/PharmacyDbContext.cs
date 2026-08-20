@@ -5,13 +5,15 @@ using PharmacyAPI.Models.Authentication;
 
 namespace PharmacyAPI.Data
 {
-    public class PharmacyDbContext  : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+    public class PharmacyDbContext
+        : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
-        public PharmacyDbContext(DbContextOptions<PharmacyDbContext> options) : base(options)
+        public PharmacyDbContext(
+            DbContextOptions<PharmacyDbContext> options)
+            : base(options)
         {
         }
 
-       
         public DbSet<Product> Products { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Order> Orders { get; set; } = null!;
@@ -25,11 +27,34 @@ namespace PharmacyAPI.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // ============================================
+            // Identity Roles
+            // ============================================
+
+            modelBuilder.Entity<ApplicationRole>().HasData(
+                new ApplicationRole
+                {
+                    Id = "role-user",
+                    Name = "User",
+                    NormalizedName = "USER",
+                    ConcurrencyStamp =
+                        "11111111-1111-1111-1111-111111111111"
+                },
+                new ApplicationRole
+                {
+                    Id = "role-admin",
+                    Name = "Admin",
+                    NormalizedName = "ADMIN",
+                    ConcurrencyStamp =
+                        "22222222-2222-2222-2222-222222222222"
+                }
+            );
 
 
-
-
+            // ============================================
             // Category -> SubCategory
+            // ============================================
+
             modelBuilder.Entity<Category>()
                 .HasMany(c => c.SubCategories)
                 .WithOne(sc => sc.Category)
@@ -37,17 +62,23 @@ namespace PharmacyAPI.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
+            // ============================================
             // Product <-> SubCategory
+            // ============================================
+
             modelBuilder.Entity<Product>()
                 .HasMany(p => p.SubCategories)
                 .WithMany(sc => sc.Products)
                 .UsingEntity(j => j.ToTable("ProductSubCategories"));
 
 
-            // Client -> Orders
+            // ============================================
+            // Client
+            // ============================================
+
             modelBuilder.Entity<Client>()
-       .HasIndex(x => x.PhoneNumber)
-       .IsUnique();
+                .HasIndex(x => x.PhoneNumber)
+                .IsUnique();
 
             modelBuilder.Entity<Client>()
                 .HasMany(x => x.Orders)
@@ -56,7 +87,10 @@ namespace PharmacyAPI.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
+            // ============================================
             // Order -> OrderItems
+            // ============================================
+
             modelBuilder.Entity<Order>()
                 .HasMany(o => o.Items)
                 .WithOne(i => i.Order)
@@ -64,17 +98,29 @@ namespace PharmacyAPI.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
+            // ============================================
             // Product -> OrderItems
+            // ============================================
+
             modelBuilder.Entity<Product>()
                 .HasMany(p => p.OrderItems)
                 .WithOne(i => i.Product)
                 .HasForeignKey(i => i.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
-            //condition for subcategory 
-            modelBuilder.Entity<SubCategory>()
-    .HasQueryFilter(sc => !sc.IsDeleted);
 
-            // Decimal precision
+
+            // ============================================
+            // SubCategory Query Filter
+            // ============================================
+
+            modelBuilder.Entity<SubCategory>()
+                .HasQueryFilter(sc => !sc.IsDeleted);
+
+
+            // ============================================
+            // Decimal Precision
+            // ============================================
+
             modelBuilder.Entity<Product>()
                 .Property(p => p.Price)
                 .HasPrecision(18, 2);
@@ -86,13 +132,29 @@ namespace PharmacyAPI.Data
             modelBuilder.Entity<OrderItem>()
                 .Property(i => i.UnitPrice)
                 .HasPrecision(18, 2);
-            // Seed Categories
-            modelBuilder.Entity<Category>().HasData(
-                new Category { Id = 1, Name = "Pain Relief" },
-                new Category { Id = 2, Name = "Vitamins" },
-                new Category { Id = 3, Name = "First Aid" }
-            );
 
+
+            // ============================================
+            // Seed Categories
+            // ============================================
+
+            modelBuilder.Entity<Category>().HasData(
+                new Category
+                {
+                    Id = 1,
+                    Name = "Pain Relief"
+                },
+                new Category
+                {
+                    Id = 2,
+                    Name = "Vitamins"
+                },
+                new Category
+                {
+                    Id = 3,
+                    Name = "First Aid"
+                }
+            );
         }
     }
 }

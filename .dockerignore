@@ -1,0 +1,14 @@
+.dockerignore
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.log
+*.vsconfig
+**/.git
+**/.gitignore
+**/*.db
+node_modules/
+npm-debug.log
+docker-compose*.yml
