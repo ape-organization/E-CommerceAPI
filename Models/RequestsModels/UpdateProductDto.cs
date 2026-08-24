@@ -10,7 +10,13 @@
 
         public int StockQuantity { get; set; }
 
+        public bool IsInStock { get; set; } = true;
+
+        public decimal DiscountPercentage { get; set; } = 0;
+
         public IFormFile? Image { get; set; }
+
+        public int BrandId { get; set; }
 
         public List<int> SubCategoryIds { get; set; } = new();
     }

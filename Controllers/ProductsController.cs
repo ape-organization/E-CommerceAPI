@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Services;
-using System.IO;
 
 namespace PharmacyAPI.Controllers
 {
@@ -13,43 +11,70 @@ namespace PharmacyAPI.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-
         private readonly PharmacyDbContext _context;
         private readonly IProductService _productService;
 
-        public ProductsController( 
-            IProductService product, PharmacyDbContext context
-            )
+        public ProductsController(
+            IProductService product,
+            PharmacyDbContext context)
         {
             _productService = product;
             _context = context;
-           
         }
 
-        // ============================================
+
+        // =====================================================
         // GET ALL PRODUCTS
         // GET: api/products
-        // ============================================
+        // =====================================================
 
-        [HttpGet]
+       
+      [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> GetProducts()
+        public async Task<IActionResult> GetProducts(
+    [FromQuery] int? categoryId,
+    [FromQuery] int? subCategoryId,
+    [FromQuery] int? brandId,
+    [FromQuery] bool? offers)
         {
-            var products = await _productService.GetProducts();
+            var products = await _productService.GetProducts(
+                categoryId,
+                subCategoryId,
+                brandId,
+                offers
+            );
 
             return Ok(products);
         }
 
 
-        // ============================================
+        // =====================================================
+        // GET ALL DISCOUNTED PRODUCTS
+        // GET: api/products/discounted
+        // =====================================================
+
+        [HttpGet("discounted")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetDiscountedProducts()
+        {
+            var products =
+                await _productService.GetDiscountedProducts();
+
+            return Ok(products);
+        }
+
+
+        // =====================================================
         // GET PRODUCT BY ID
         // GET: api/products/5
-        // ============================================
+        // =====================================================
 
         [HttpGet("{id:int}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetProduct(int id)
         {
-            var product = await _productService.GetProduct(id);
+            var product =
+                await _productService.GetProduct(id);
 
             if (product == null)
             {
@@ -63,13 +88,15 @@ namespace PharmacyAPI.Controllers
         }
 
 
-        // ============================================
+        // =====================================================
         // CREATE PRODUCT
         // POST: api/products
         // Content-Type: multipart/form-data
-        // ============================================
+        // =====================================================
 
         [HttpPost]
+        [Authorize]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreateProduct(
             [FromForm] ProductDto dto)
         {
@@ -80,7 +107,10 @@ namespace PharmacyAPI.Controllers
 
                 return CreatedAtAction(
                     nameof(GetProduct),
-                    new { id = product.Id },
+                    new
+                    {
+                        id = product.Id
+                    },
                     product);
             }
             catch (InvalidOperationException ex)
@@ -100,13 +130,15 @@ namespace PharmacyAPI.Controllers
         }
 
 
-        // ============================================
+        // =====================================================
         // UPDATE PRODUCT
         // PUT: api/products/5
         // Content-Type: multipart/form-data
-        // ============================================
+        // =====================================================
 
         [HttpPut("{id:int}")]
+        [Authorize]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateProduct(
             int id,
             [FromForm] UpdateProductDto dto)
@@ -148,12 +180,50 @@ namespace PharmacyAPI.Controllers
         }
 
 
-        // ============================================
+        // =====================================================
+        // REMOVE DISCOUNT
+        // PUT: api/products/5/remove-discount
+        // =====================================================
+
+        [HttpPut("{id:int}/remove-discount")]
+        [Authorize]
+        public async Task<IActionResult> RemoveDiscount(int id)
+        {
+            try
+            {
+                var result =
+                    await _productService.RemoveDiscount(id);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        message = "Product not found."
+                    });
+                }
+
+                var product =
+                    await _productService.GetProduct(id);
+
+                return Ok(product);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+
+        // =====================================================
         // DELETE PRODUCT
         // DELETE: api/products/5
-        // ============================================
+        // =====================================================
 
         [HttpDelete("{id:int}")]
+        [Authorize]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var deleted =
@@ -174,10 +244,10 @@ namespace PharmacyAPI.Controllers
         }
 
 
-        // ============================================
+        // =====================================================
         // CHECK PRODUCT NAME
         // GET: api/products/check-name?name=Panadol
-        // ============================================
+        // =====================================================
 
         [HttpGet("check-name")]
         public async Task<IActionResult> CheckProductExists(

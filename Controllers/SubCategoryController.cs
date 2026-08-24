@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Services;
 
@@ -18,6 +19,7 @@ namespace PharmacyAPI.Controllers
 
         // GET: api/SubCategories
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var result = await _service.GetAllAsync();

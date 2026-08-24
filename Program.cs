@@ -37,6 +37,7 @@ builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<  IBrandService, BrandService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -45,9 +46,18 @@ builder.Services.AddSwaggerGen();
 // CORS
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("AllowAngularDev", b =>
+    opt.AddPolicy("AllowCors", b =>
     {
-        b.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        b
+         .WithOrigins(
+                "http://localhost:5000",
+                "http://localhost:6000",
+                "http://adminpanel.ape-org.com",
+                "http://e-commerce.ape-org.com"
+            )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
     });
 });
 
@@ -110,7 +120,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAngularDev");
+app.UseCors("AllowCors");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();       // Serve images, etc.

@@ -256,6 +256,29 @@ namespace PharmacyAPI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("PharmacyAPI.Models.Brand", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Brand");
+                });
+
             modelBuilder.Entity("PharmacyAPI.Models.Cart", b =>
                 {
                     b.Property<int>("Id")
@@ -306,6 +329,9 @@ namespace PharmacyAPI.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -446,13 +472,23 @@ namespace PharmacyAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("BrandId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsInStock")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -467,6 +503,8 @@ namespace PharmacyAPI.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
 
                     b.ToTable("Products");
                 });
@@ -619,6 +657,17 @@ namespace PharmacyAPI.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("PharmacyAPI.Models.Product", b =>
+                {
+                    b.HasOne("PharmacyAPI.Models.Brand", "Brand")
+                        .WithMany("Products")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+                });
+
             modelBuilder.Entity("PharmacyAPI.Models.SubCategory", b =>
                 {
                     b.HasOne("PharmacyAPI.Models.Category", "Category")
@@ -648,6 +697,11 @@ namespace PharmacyAPI.Migrations
             modelBuilder.Entity("PharmacyAPI.Models.Authentication.ApplicationUser", b =>
                 {
                     b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("PharmacyAPI.Models.Brand", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("PharmacyAPI.Models.Cart", b =>

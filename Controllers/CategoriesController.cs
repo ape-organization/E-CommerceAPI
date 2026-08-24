@@ -1,71 +1,179 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PharmacyAPI.Data;
 using PharmacyAPI.Models;
+using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Services;
 
 namespace PharmacyAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class CategoriesController : ControllerBase
     {
-        private readonly PharmacyDbContext _context;
         private readonly ICategoryService categoryService;
 
-        public CategoriesController(PharmacyDbContext context,ICategoryService category)
+
+        public CategoriesController(
+            ICategoryService category
+        )
         {
             categoryService = category;
-            _context = context;
         }
 
-        [HttpGet]
-        [Authorize]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+
+        // =====================================================
+        // GET MENU
+        // =====================================================
+
+        [HttpGet("menu")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<CategoryMenu>>>
+            GetCategoriesForMenu()
         {
-            var cats= await categoryService.GetCategories();
-            return cats;
+            var categories =
+                await categoryService
+                    .GetCategoriesForMenu();
+
+            return Ok(categories);
         }
+
+
+        // =====================================================
+        // GET ALL
+        // =====================================================
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<Category>>>
+            GetCategories()
+        {
+            var cats =
+                await categoryService
+                    .GetCategories();
+
+            return Ok(cats);
+        }
+
+
+        // =====================================================
+        // GET BY ID
+        // =====================================================
 
         [HttpGet("{id}")]
         [Authorize]
-        public async Task<ActionResult<Category>> GetCategory(int id)
+        public async Task<ActionResult<Category>>
+            GetCategory(int id)
         {
-            var category = await categoryService.GetCategory(id);
-            return category;
-        }
+            var category =
+                await categoryService
+                    .GetCategory(id);
 
-        [HttpPost]
-        [Authorize]
-        public async Task<ActionResult<Category>> CreateCategory(Category dto)
-        {
-            var cat = await categoryService.CreateCategory(dto);
-            return cat;
-        }
 
-        [HttpPut("{id}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateCategory(int id, Category dto)
-        {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound();
-            category.Name = dto.Name;
+            if (category == null)
+                return NotFound();
 
-            await categoryService.UpdateCategory(id, category);
+
             return Ok(category);
         }
 
+
+        // =====================================================
+        // CREATE
+        // =====================================================
+
+        [HttpPost]
+        [Authorize]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<Category>>
+            CreateCategory(
+                [FromForm] CreateCategoryRequest dto
+            )
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest(
+                    "Category name is required."
+                );
+            }
+
+
+            var category =
+                await categoryService
+                    .CreateCategory(dto);
+
+
+            return CreatedAtAction(
+                nameof(GetCategory),
+                new
+                {
+                    id = category.Id
+                },
+                category
+            );
+        }
+
+
+        // =====================================================
+        // UPDATE
+        // =====================================================
+
+        [HttpPut("{id}")]
+        [Authorize]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult>
+            UpdateCategory(
+                int id,
+                [FromForm] CreateCategoryRequest dto
+            )
+        {
+            try
+            {
+                await categoryService
+                    .UpdateCategory(
+                        id,
+                        dto
+                    );
+
+
+                var category =
+                    await categoryService
+                        .GetCategory(id);
+
+
+                return Ok(category);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+        }
+
+
+        // =====================================================
+        // DELETE
+        // =====================================================
+
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<IActionResult> DeleteCategory(int id)
+        public async Task<IActionResult>
+            DeleteCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound();
-            category.IsDeleted = true;
-           
-            await categoryService.DeleteCategory(id,category);
+            var category =
+                await categoryService
+                    .GetCategory(id);
+
+
+            if (category == null)
+                return NotFound();
+
+
+            await categoryService
+                .DeleteCategory(
+                    id,
+                    category
+                );
+
+
             return NoContent();
         }
     }

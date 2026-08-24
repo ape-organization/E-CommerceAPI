@@ -59,33 +59,68 @@ namespace PharmacyAPI.Models.Authentication
                 return tokenOptions;
             }
 
-            public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
-            {
-                var tokenValidationParameters = new TokenValidationParameters
+        public ClaimsPrincipal GetPrincipalFromExpiredToken(
+   string token)
+        {
+            var tokenValidationParameters =
+                new TokenValidationParameters
                 {
                     ValidateAudience = true,
                     ValidateIssuer = true,
+
                     ValidateIssuerSigningKey = true,
-                    ValidateLifetime = false, // allow expired
-                    ValidIssuer = _configuration["JWTSettings:validIssuer"],
-                    ValidAudience = _configuration["JWTSettings:validAudience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(_configuration["JWTSettings:securityKey"]))
+
+                    IssuerSigningKey =
+                        new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(
+                                _configuration[
+                                    "JWTSettings:securityKey"
+                                ]!
+                            )
+                        ),
+
+                    ValidateLifetime = false,
+
+                    ValidIssuer =
+                        _configuration[
+                            "JWTSettings:validIssuer"
+                        ],
+
+                    ValidAudience =
+                        _configuration[
+                            "JWTSettings:validAudience"
+                        ]
                 };
 
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
 
-                if (securityToken is not JwtSecurityToken jwtSecurityToken ||
-                    !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256,
-                    StringComparison.InvariantCultureIgnoreCase))
-                {
-                    throw new SecurityTokenException("Invalid token");
-                }
+            var tokenHandler =
+                new JwtSecurityTokenHandler();
 
-                return principal;
+
+            var principal =
+                tokenHandler.ValidateToken(
+                    token,
+                    tokenValidationParameters,
+                    out SecurityToken securityToken
+                );
+
+
+            if (
+                securityToken is not JwtSecurityToken jwtToken ||
+                !jwtToken.Header.Alg.Equals(
+                    SecurityAlgorithms.HmacSha256,
+                    StringComparison.InvariantCultureIgnoreCase
+                )
+            )
+            {
+                throw new SecurityTokenException(
+                    "Invalid token"
+                );
             }
 
+
+            return principal;
+        }
         public string GenerateAccessToken(IEnumerable<Claim> claims)
         {
             // Get signing credentials

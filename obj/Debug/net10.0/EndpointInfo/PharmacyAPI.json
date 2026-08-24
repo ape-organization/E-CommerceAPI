@@ -5,6 +5,246 @@
     "version": "1.0"
   },
   "paths": {
+    "/api/Brands": {
+      "get": {
+        "tags": [
+          "Brands"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Brand"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Brand"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Brand"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Brands"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "Name": {
+                  "style": "form"
+                },
+                "Image": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brand"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brand"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brand"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Brands/{id}": {
+      "get": {
+        "tags": [
+          "Brands"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brand"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brand"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Brand"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Brands"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "Name": {
+                  "style": "form"
+                },
+                "Image": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Brands"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Categories/menu": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryMenu"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryMenu"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryMenu"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Categories": {
       "get": {
         "tags": [
@@ -48,19 +288,26 @@
         ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Category"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Category"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/Category"
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "Name": {
+                  "style": "form"
+                },
+                "Image": {
+                  "style": "form"
+                }
               }
             }
           }
@@ -147,19 +394,26 @@
         ],
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Category"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Category"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/Category"
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "Name": {
+                  "style": "form"
+                },
+                "Image": {
+                  "style": "form"
+                }
               }
             }
           }
@@ -377,6 +631,43 @@
         "tags": [
           "Products"
         ],
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "subCategoryId",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "brandId",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offers",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success"
@@ -411,12 +702,23 @@
                     "type": "integer",
                     "format": "int32"
                   },
+                  "IsInStock": {
+                    "type": "boolean"
+                  },
                   "ImageUrl": {
                     "type": "string"
                   },
                   "Image": {
                     "type": "string",
                     "format": "binary"
+                  },
+                  "DiscountPercentage": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "BrandId": {
+                    "type": "integer",
+                    "format": "int32"
                   },
                   "SubCategoryIds": {
                     "type": "array",
@@ -443,10 +745,19 @@
                 "StockQuantity": {
                   "style": "form"
                 },
+                "IsInStock": {
+                  "style": "form"
+                },
                 "ImageUrl": {
                   "style": "form"
                 },
                 "Image": {
+                  "style": "form"
+                },
+                "DiscountPercentage": {
+                  "style": "form"
+                },
+                "BrandId": {
                   "style": "form"
                 },
                 "SubCategoryIds": {
@@ -456,6 +767,18 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Products/discounted": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
         "responses": {
           "200": {
             "description": "Success"
@@ -522,9 +845,20 @@
                     "type": "integer",
                     "format": "int32"
                   },
+                  "IsInStock": {
+                    "type": "boolean"
+                  },
+                  "DiscountPercentage": {
+                    "type": "number",
+                    "format": "double"
+                  },
                   "Image": {
                     "type": "string",
                     "format": "binary"
+                  },
+                  "BrandId": {
+                    "type": "integer",
+                    "format": "int32"
                   },
                   "SubCategoryIds": {
                     "type": "array",
@@ -548,7 +882,16 @@
                 "StockQuantity": {
                   "style": "form"
                 },
+                "IsInStock": {
+                  "style": "form"
+                },
+                "DiscountPercentage": {
+                  "style": "form"
+                },
                 "Image": {
+                  "style": "form"
+                },
+                "BrandId": {
                   "style": "form"
                 },
                 "SubCategoryIds": {
@@ -565,6 +908,30 @@
         }
       },
       "delete": {
+        "tags": [
+          "Products"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Products/{id}/remove-discount": {
+      "put": {
         "tags": [
           "Products"
         ],
@@ -1288,6 +1655,34 @@
         },
         "additionalProperties": false
       },
+      "Brand": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "isDeleted": {
+            "type": "boolean"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "Cart": {
         "type": "object",
         "properties": {
@@ -1348,6 +1743,10 @@
             "type": "string",
             "nullable": true
           },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
           "isDeleted": {
             "type": "boolean"
           },
@@ -1355,6 +1754,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SubCategory"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoryMenu": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "subCategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubCategoryMenuDto"
             },
             "nullable": true
           }
@@ -1571,12 +1991,35 @@
             "type": "integer",
             "format": "int32"
           },
+          "isInStock": {
+            "type": "boolean"
+          },
           "imageUrl": {
             "type": "string",
             "nullable": true
           },
           "isDeleted": {
             "type": "boolean"
+          },
+          "discountPercentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "hasDiscount": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "discountedPrice": {
+            "type": "number",
+            "format": "double",
+            "readOnly": true
+          },
+          "brandId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "brand": {
+            "$ref": "#/components/schemas/Brand"
           },
           "subCategories": {
             "type": "array",
@@ -1646,6 +2089,20 @@
             "items": {
               "$ref": "#/components/schemas/Product"
             },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubCategoryMenuDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
             "nullable": true
           }
         },

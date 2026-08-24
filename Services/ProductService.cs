@@ -7,7 +7,11 @@ namespace PharmacyAPI.Services
 {
     public interface IProductService
     {
-        Task<List<ProductResponseDto>> GetProducts();
+        Task<List<ProductResponseDto>> GetProducts(
+     int? categoryId = null,
+     int? subCategoryId = null,
+     int? brandId = null,
+     bool? offers = null);
 
         Task<ProductResponseDto?> GetProduct(int id);
 
@@ -20,6 +24,9 @@ namespace PharmacyAPI.Services
         Task<bool> DeleteProduct(int id);
 
         Task<bool> CheckProductExists(string name);
+        Task<IEnumerable<Product>> GetDiscountedProducts();
+
+        Task<bool> RemoveDiscount(int id);
     }
 
 
@@ -36,18 +43,118 @@ namespace PharmacyAPI.Services
             _environment = environment;
         }
 
+        public async Task<bool> RemoveDiscount(int id)
+        {
+            var product =
+                await _context.Products
+                    .FirstOrDefaultAsync(p =>
+                        p.Id == id &&
+                        !p.IsDeleted);
+
+            if (product == null)
+            {
+                return false;
+            }
+
+            product.DiscountPercentage = 0;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<IEnumerable<Product>> GetDiscountedProducts()
+        {
+            return await _context.Products
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.DiscountPercentage > 0)
+                .Include(p => p.Brand)
+                .Include(p => p.SubCategories)
+                .ToListAsync();
+        }
 
         // ============================================
         // GET ALL PRODUCTS
         // ============================================
 
-        public async Task<List<ProductResponseDto>> GetProducts()
+        public async Task<List<ProductResponseDto>> GetProducts(
+      int? categoryId = null,
+      int? subCategoryId = null,
+      int? brandId = null,
+      bool? offers = null)
         {
-            return await _context.Products
+            var query = _context.Products
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted)
+                .Where(p => !p.IsDeleted);
+
+
+            // =========================
+            // CATEGORY FILTER
+            // =========================
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(p =>
+                    p.SubCategories.Any(sc =>
+                        !sc.IsDeleted &&
+                        sc.CategoryId == categoryId.Value
+                    )
+                );
+            }
+
+
+            // =========================
+            // SUBCATEGORY FILTER
+            // =========================
+
+            if (subCategoryId.HasValue)
+            {
+                query = query.Where(p =>
+                    p.SubCategories.Any(sc =>
+                        !sc.IsDeleted &&
+                        sc.Id == subCategoryId.Value
+                    )
+                );
+            }
+
+
+            // =========================
+            // BRAND FILTER
+            // =========================
+
+            if (brandId.HasValue)
+            {
+                query = query.Where(p =>
+                    p.BrandId == brandId.Value
+                );
+            }
+
+
+            // =========================
+            // OFFERS FILTER
+            // =========================
+
+            if (offers == true)
+            {
+                query = query.Where(p =>
+                    p.DiscountPercentage > 0
+                );
+            }
+
+
+            // =========================
+            // RESPONSE
+            // =========================
+
+            return await query
+
                 .Select(p => new ProductResponseDto
                 {
+                    // =========================
+                    // BASIC INFORMATION
+                    // =========================
+
                     Id = p.Id,
 
                     Name = p.Name,
@@ -56,24 +163,72 @@ namespace PharmacyAPI.Services
 
                     Price = p.Price,
 
-                    StockQuantity = p.StockQuantity,
+                    DiscountPercentage =
+                        p.DiscountPercentage,
 
-                    ImageUrl = p.ImageUrl,
+                    StockQuantity =
+                        p.StockQuantity,
+
+                    IsInStock =
+                        p.IsInStock,
+
+                    ImageUrl =
+                        p.ImageUrl,
+
+
+                    // =========================
+                    // BRAND
+                    // =========================
+
+                    BrandId =
+                        p.BrandId,
+
+                    Brand = p.Brand == null
+                        ? null
+                        : new BrandResponseDto
+                        {
+                            Id = p.Brand.Id,
+
+                            Name = p.Brand.Name,
+
+                            ImageUrl =
+                                p.Brand.ImageUrl
+                        },
+
+
+                    // =========================
+                    // CATEGORY
+                    // =========================
+
+                    CategoryId = p.SubCategories
+                        .Where(sc => !sc.IsDeleted)
+                        .Select(sc => (int?)sc.CategoryId)
+                        .FirstOrDefault(),
+
+
+                    // =========================
+                    // SUBCATEGORIES
+                    // =========================
 
                     SubCategories = p.SubCategories
                         .Where(sc => !sc.IsDeleted)
+
                         .Select(sc => new SubCategoryResponseDto
                         {
                             Id = sc.Id,
 
                             Name = sc.Name,
 
-                            CategoryId = sc.CategoryId,
+                            CategoryId =
+                                sc.CategoryId,
 
-                            CategoryName = sc.Category.Name
+                            CategoryName =
+                                sc.Category.Name
                         })
+
                         .ToList()
                 })
+
                 .ToListAsync();
         }
 
@@ -97,8 +252,9 @@ namespace PharmacyAPI.Services
                     Description = p.Description,
 
                     Price = p.Price,
-
+                    IsInStock = p.IsInStock,
                     StockQuantity = p.StockQuantity,
+                    
 
                     ImageUrl = p.ImageUrl,
 
@@ -138,6 +294,14 @@ namespace PharmacyAPI.Services
         public async Task<ProductDto> CreateProduct(
             ProductDto dto)
         {
+            if (dto.DiscountPercentage < 0 ||
+    dto.DiscountPercentage > 100)
+            {
+                throw new InvalidOperationException(
+                    "Discount percentage must be between 0 and 100."
+                );
+            }
+
             // Check product name
             var nameExists = await CheckProductExists(dto.Name);
 
@@ -176,12 +340,13 @@ namespace PharmacyAPI.Services
                 Name = dto.Name.Trim(),
 
                 Description = dto.Description,
-
+                IsInStock = dto.IsInStock,
                 Price = dto.Price,
 
                 StockQuantity = dto.StockQuantity,
-
-                ImageUrl = imageUrl
+                BrandId=dto.BrandId,
+                ImageUrl = imageUrl,
+                DiscountPercentage = dto.DiscountPercentage
             };
 
 
@@ -211,6 +376,7 @@ namespace PharmacyAPI.Services
                 StockQuantity = product.StockQuantity,
 
                 ImageUrl = product.ImageUrl,
+                IsInStock = product.IsInStock,
 
                 SubCategoryIds = product.SubCategories
                     .Select(sc => sc.Id)
@@ -227,6 +393,16 @@ namespace PharmacyAPI.Services
             int id,
             UpdateProductDto dto)
         {
+
+            if (dto.DiscountPercentage < 0 ||
+    dto.DiscountPercentage > 100)
+            {
+                throw new InvalidOperationException(
+                    "Discount percentage must be between 0 and 100."
+                );
+            }
+
+
             var product = await _context.Products
                 .Include(p => p.SubCategories)
                 .FirstOrDefaultAsync(p =>
@@ -290,7 +466,10 @@ namespace PharmacyAPI.Services
             product.Price = dto.Price;
 
             product.StockQuantity = dto.StockQuantity;
-
+            product.DiscountPercentage =
+    dto.DiscountPercentage;
+            product.BrandId = dto.BrandId;
+            product.IsInStock = dto.IsInStock;
 
             // ============================================
             // UPDATE MANY-TO-MANY RELATIONSHIP

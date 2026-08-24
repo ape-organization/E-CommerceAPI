@@ -22,6 +22,7 @@ namespace PharmacyAPI.Data
         public DbSet<CartItem> CartItems { get; set; } = null!;
         public DbSet<Client> Clients { get; set; } = null!;
         public DbSet<SubCategory> SubCategories { get; set; } = null!;
+        public DbSet<Brand> Brand { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -70,6 +71,16 @@ namespace PharmacyAPI.Data
                 .HasMany(p => p.SubCategories)
                 .WithMany(sc => sc.Products)
                 .UsingEntity(j => j.ToTable("ProductSubCategories"));
+
+            modelBuilder.Entity<Product>()
+    .HasOne(p => p.Brand)
+    .WithMany(b => b.Products)
+    .HasForeignKey(p => p.BrandId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Product>()
+    .Property(p => p.DiscountPercentage)
+    .HasPrecision(5, 2);
 
 
             // ============================================
@@ -155,6 +166,7 @@ namespace PharmacyAPI.Data
                     Name = "First Aid"
                 }
             );
+           
         }
     }
 }

@@ -86,31 +86,139 @@ namespace PharmacyAPI.Controllers
         }
         [HttpPost("refresh")]
         [AllowAnonymous]
-        public async Task<IActionResult> Refresh(Token tokenRequest)
+        public async Task<IActionResult> Refresh(
+       [FromBody] Token tokenRequest)
         {
-            if (tokenRequest is null)
-                return BadRequest("Invalid request");
-
-            var principal = _jwtHandler.GetPrincipalFromExpiredToken(tokenRequest.AccessToken);
-            var username = principal.Identity?.Name;
-
-            var user = await userManager.FindByNameAsync(username);
-            if (user == null || user.RefreshToken != tokenRequest.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
-                return Unauthorized();
-
-            var newAccessToken = _jwtHandler.GenerateAccessToken(principal.Claims);
-            var newRefreshToken = GenerateRefreshToken();
-
-            user.RefreshToken = newRefreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-            await userManager.UpdateAsync(user);
-            Console.WriteLine(_configuration["JWTSettings:securityKey"]);
-            return Ok(new
+            if (tokenRequest == null)
             {
-                Token = newAccessToken,
-                RefreshToken = newRefreshToken
-            });
+                return BadRequest("Invalid request");
+            }
+
+            try
+            {
+                // =====================================================
+                // GET PRINCIPAL FROM EXPIRED ACCESS TOKEN
+                // =====================================================
+
+                var principal =
+                    _jwtHandler.GetPrincipalFromExpiredToken(
+                        tokenRequest.AccessToken
+                    );
+
+                if (principal == null)
+                {
+                    return Unauthorized();
+                }
+
+
+                // =====================================================
+                // GET USERNAME
+                // =====================================================
+
+                var username =
+                    principal.Identity?.Name;
+
+                if (string.IsNullOrEmpty(username))
+                {
+                    return Unauthorized();
+                }
+
+
+                // =====================================================
+                // FIND USER
+                // =====================================================
+
+                var user =
+                    await userManager.FindByNameAsync(
+                        username
+                    );
+
+                if (user == null)
+                {
+                    return Unauthorized();
+                }
+
+
+                // =====================================================
+                // CHECK REFRESH TOKEN
+                // =====================================================
+
+                if (
+                    string.IsNullOrEmpty(user.RefreshToken) ||
+                    user.RefreshToken != tokenRequest.RefreshToken ||
+                    user.RefreshTokenExpiryTime <= DateTime.UtcNow
+                )
+                {
+                    return Unauthorized();
+                }
+
+
+                // =====================================================
+                // GENERATE NEW ACCESS TOKEN
+                // =====================================================
+
+                var claims =
+                    await _jwtHandler.GetClaims(user);
+
+                var signingCredentials =
+                    _jwtHandler.GetSigningCredentials();
+
+                var tokenOptions =
+                    _jwtHandler.GenerateTokenOptions(
+                        signingCredentials,
+                        claims
+                    );
+
+                var newAccessToken =
+                    new JwtSecurityTokenHandler()
+                        .WriteToken(tokenOptions);
+
+
+                // =====================================================
+                // GENERATE NEW REFRESH TOKEN
+                // =====================================================
+
+                var newRefreshToken =
+                    GenerateRefreshToken();
+
+
+                int.TryParse(
+                    _configuration[
+                        "JWTSettings:RefreshTokenValidityInDays"
+                    ],
+                    out int refreshTokenValidityInDays
+                );
+
+
+                user.RefreshToken =
+                    newRefreshToken;
+
+                user.RefreshTokenExpiryTime =
+                    DateTime.UtcNow.AddDays(
+                        refreshTokenValidityInDays
+                    );
+
+
+                await userManager.UpdateAsync(user);
+
+
+                // =====================================================
+                // RESPONSE
+                // =====================================================
+
+                return Ok(new
+                {
+                    Token = newAccessToken,
+
+                    RefreshToken = newRefreshToken
+                });
+            }
+            catch
+            {
+                return Unauthorized();
+            }
         }
+
 
         [HttpGet]
         [AllowAnonymous]
