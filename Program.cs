@@ -52,8 +52,8 @@ builder.Services.AddCors(opt =>
          .WithOrigins(
                 "http://localhost:5000",
                 "http://localhost:6000",
-                "http://adminpanel.ape-org.com",
-                "http://e-commerce.ape-org.com"
+                "https://adminpanel.ape-org.com",
+                "https://e-commerce.ape-org.com"
             )
         .AllowAnyHeader()
         .AllowAnyMethod()
