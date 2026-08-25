@@ -18,6 +18,7 @@ namespace PharmacyAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [AllowAnonymous]
     public class UsersController : ControllerBase
     {
         private readonly PharmacyDbContext _context;
@@ -251,7 +252,6 @@ namespace PharmacyAPI.Controllers
         }
 
         [HttpPost("addUser")]
-        [AllowAnonymous]
 
         // [Authorize]
         public async Task<ActionResult<ApplicationUser>> CreateUser([FromBody]UserDto UserDto)
