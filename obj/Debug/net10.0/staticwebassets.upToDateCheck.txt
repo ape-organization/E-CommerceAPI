@@ -27,3 +27,8 @@ wwwroot\images\1041dd97-9197-462e-9ab0-b900ad40bf0e.jfif
 wwwroot\images\cd5b4d1a-3c18-4161-947b-f50469ccb203.webp
 wwwroot\uploads\categories\66f5cb27-96e1-4fe0-8568-18a536599110.png
 wwwroot\uploads\categories\ffa38d65-c1a4-4b66-a432-a22615d7592f.png
+wwwroot\uploads\categories\e29a4de3-22b7-4c5d-a2b6-a7d776358c22.png
+wwwroot\uploads\categories\12221c55-c348-49d3-988c-cdb4f78dd313.png
+wwwroot\uploads\categories\1199f33e-76d2-45e5-99ae-7a1b5eb7c58f.png
+wwwroot\uploads\brands\36c1c866-6aa2-49f9-a038-43c2d7bdea6b.jfif
+wwwroot\uploads\brands\8e16c669-e14d-451c-a901-8e721c98c985.jfif

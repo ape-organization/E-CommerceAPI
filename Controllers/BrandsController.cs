@@ -8,6 +8,7 @@ namespace PharmacyAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class BrandsController : ControllerBase
     {
         private readonly IBrandService _brandService;

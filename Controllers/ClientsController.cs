@@ -6,6 +6,7 @@ namespace PharmacyAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ClientsController : ControllerBase
     {
         private readonly IClientService _clientService;

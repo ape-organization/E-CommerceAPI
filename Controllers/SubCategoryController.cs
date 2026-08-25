@@ -7,6 +7,7 @@ namespace PharmacyAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class SubCategoryController : Controller
     {
         private readonly ISubCategoryService _service;

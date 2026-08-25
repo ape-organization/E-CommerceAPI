@@ -103,29 +103,32 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Global fallback authorization (all API endpoints require JWT by default)
-builder.Services.AddAuthorization(opt =>
-{
-    opt.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-        .RequireAuthenticatedUser()
-        .Build();
-});
+//builder.Services.AddAuthorization(opt =>
+//{
+//    opt.FallbackPolicy = new AuthorizationPolicyBuilder()
+//        .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+//        .RequireAuthenticatedUser()
+//        .Build();
+//});
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Middleware order is critical
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
 app.UseCors("AllowCors");
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();       // Serve images, etc.
-app.UseAuthentication();     // JWT auth
-app.UseAuthorization();      // Authorize endpoints
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
