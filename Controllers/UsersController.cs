@@ -18,7 +18,6 @@ namespace PharmacyAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [AllowAnonymous]
     public class UsersController : ControllerBase
     {
         private readonly PharmacyDbContext _context;
