@@ -3,8 +3,24 @@
   "WorkspaceRootPath": "D:\\GitHub\\cosmeticsAPI\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\controllers\\orderscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:controllers\\orderscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\controllers\\productscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:controllers\\productscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\models\\requestsmodels\\getproductsbyidsrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:models\\requestsmodels\\getproductsbyidsrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\services\\productservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:services\\productservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\services\\categoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:services\\categoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
@@ -51,19 +67,71 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "OrdersController.cs",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Controllers\\OrdersController.cs",
+              "RelativeDocumentMoniker": "Controllers\\OrdersController.cs",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Controllers\\OrdersController.cs",
+              "RelativeToolTip": "Controllers\\OrdersController.cs",
+              "ViewState": "AgIAABUAAAAAAAAAAAAgwB0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-26T13:10:03.125Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "GetProductsByIdsRequest.cs",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Models\\RequestsModels\\GetProductsByIdsRequest.cs",
+              "RelativeDocumentMoniker": "Models\\RequestsModels\\GetProductsByIdsRequest.cs",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Models\\RequestsModels\\GetProductsByIdsRequest.cs",
+              "RelativeToolTip": "Models\\RequestsModels\\GetProductsByIdsRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAA6AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-26T13:00:28.973Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ProductService.cs",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Services\\ProductService.cs",
+              "RelativeDocumentMoniker": "Services\\ProductService.cs",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Services\\ProductService.cs",
+              "RelativeToolTip": "Services\\ProductService.cs",
+              "ViewState": "AgIAAIkAAAAAAAAAAAAgwJwAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-26T12:52:27.756Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "CategoryService.cs",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Services\\CategoryService.cs",
+              "RelativeDocumentMoniker": "Services\\CategoryService.cs",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Services\\CategoryService.cs",
+              "RelativeToolTip": "Services\\CategoryService.cs",
+              "ViewState": "AgIAAPAAAAAAAAAAAAAowPkAAAAaAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-26T09:27:50.39Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "ProductsController.cs",
               "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Controllers\\ProductsController.cs",
               "RelativeDocumentMoniker": "Controllers\\ProductsController.cs",
               "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Controllers\\ProductsController.cs",
               "RelativeToolTip": "Controllers\\ProductsController.cs",
-              "ViewState": "AgIAABgAAAAAAAAAAAAYwCcAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAABMAAAAAAAAAAAAAABoAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-08-25T14:41:25.286Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 5,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\appsettings.json",
               "RelativeDocumentMoniker": "appsettings.json",
@@ -76,7 +144,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "Program.cs",
               "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -84,8 +152,7 @@
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAACoAAAAAAAAAAAAAADcAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-24T14:56:38.127Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-24T14:56:38.127Z"
             }
           ]
         },

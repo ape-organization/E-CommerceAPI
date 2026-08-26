@@ -246,7 +246,8 @@ namespace PharmacyAPI.Services
                     ".jpg",
                     ".jpeg",
                     ".png",
-                    ".webp"
+                    ".webp",
+                    ".jfif"
                 };
 
 

@@ -27,6 +27,9 @@ namespace PharmacyAPI.Services
         Task<IEnumerable<Product>> GetDiscountedProducts();
 
         Task<bool> RemoveDiscount(int id);
+        Task<List<ProductResponseDto>> GetProductsByIds(
+    List<int> productIds
+);
     }
 
 
@@ -42,7 +45,116 @@ namespace PharmacyAPI.Services
             _context = context;
             _environment = environment;
         }
+        // ============================================
+        // GET PRODUCTS BY IDS
+        // ============================================
 
+        public async Task<List<ProductResponseDto>> GetProductsByIds(
+            List<int> productIds)
+        {
+            if (productIds == null || productIds.Count == 0)
+            {
+                return new List<ProductResponseDto>();
+            }
+
+            // Remove duplicates and invalid IDs
+            var ids = productIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (ids.Count == 0)
+            {
+                return new List<ProductResponseDto>();
+            }
+
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p =>
+                    ids.Contains(p.Id) &&
+                    !p.IsDeleted)
+                .Select(p => new ProductResponseDto
+                {
+                    // ========================================
+                    // BASIC INFORMATION
+                    // ========================================
+
+                    Id = p.Id,
+
+                    Name = p.Name,
+
+                    Description = p.Description,
+
+                    Price = p.Price,
+
+                    DiscountPercentage =
+                        p.DiscountPercentage,
+
+                    StockQuantity =
+                        p.StockQuantity,
+
+                    IsInStock =
+                        p.IsInStock,
+
+                    ImageUrl =
+                        p.ImageUrl,
+
+
+                    // ========================================
+                    // BRAND
+                    // ========================================
+
+                    BrandId =
+                        p.BrandId,
+
+                    Brand = p.Brand == null
+                        ? null
+                        : new BrandResponseDto
+                        {
+                            Id = p.Brand.Id,
+
+                            Name = p.Brand.Name,
+
+                            ImageUrl =
+                                p.Brand.ImageUrl
+                        },
+
+
+                    // ========================================
+                    // CATEGORY
+                    // ========================================
+
+                    CategoryId =
+                        p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => (int?)sc.CategoryId)
+                            .FirstOrDefault(),
+
+
+                    // ========================================
+                    // SUBCATEGORIES
+                    // ========================================
+
+                    SubCategories =
+                        p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => new SubCategoryResponseDto
+                            {
+                                Id = sc.Id,
+
+                                Name = sc.Name,
+
+                                CategoryId =
+                                    sc.CategoryId,
+
+                                CategoryName =
+                                    sc.Category.Name
+
+                            })
+                            .ToList()
+                })
+                .ToListAsync();
+        }
         public async Task<bool> RemoveDiscount(int id)
         {
             var product =

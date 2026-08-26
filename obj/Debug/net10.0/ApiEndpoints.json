@@ -576,6 +576,22 @@
   },
   {
     "ContainingType": "PharmacyAPI.Controllers.ProductsController",
+    "Method": "GetCartProducts",
+    "RelativePath": "api/Products/cart",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "PharmacyAPI.Models.RequestsModels.GetProductsByIdsRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.ProductsController",
     "Method": "CheckProductExists",
     "RelativePath": "api/Products/check-name",
     "HttpMethod": "GET",

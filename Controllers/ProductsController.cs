@@ -22,15 +22,36 @@ namespace PharmacyAPI.Controllers
             _productService = product;
             _context = context;
         }
+        //=============================
+        // check products ids exists 
+        //==============================
+        [HttpPost("cart")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetCartProducts(
+    [FromBody] GetProductsByIdsRequest request)
+        {
+            if (request == null ||
+                request.ProductIds == null ||
+                request.ProductIds.Count == 0)
+            {
+                return Ok(new List<ProductResponseDto>());
+            }
 
+            var products =
+                await _productService.GetProductsByIds(
+                    request.ProductIds
+                );
+
+            return Ok(products);
+        }
 
         // =====================================================
         // GET ALL PRODUCTS
         // GET: api/products
         // =====================================================
 
-       
-      [HttpGet]
+
+        [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetProducts(
     [FromQuery] int? categoryId,
