@@ -328,3 +328,6 @@ D:\GitHub\cosmeticsAPI\obj\Debug\net10.0\PharmacyAPI.genruntimeconfig.cache
 D:\GitHub\cosmeticsAPI\obj\Debug\net10.0\ref\PharmacyAPI.dll
 D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\Prometheus.NetStandard.dll
 D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\Prometheus.AspNetCore.dll
+D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
+D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\MailKit.dll
+D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\MimeKit.dll

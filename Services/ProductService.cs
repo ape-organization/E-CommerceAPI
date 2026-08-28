@@ -37,13 +37,16 @@ namespace PharmacyAPI.Services
     {
         private readonly PharmacyDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IEmailService _emailService;
 
         public ProductService(
             PharmacyDbContext context,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+             IEmailService emailService)
         {
             _context = context;
             _environment = environment;
+            _emailService = emailService;
         }
         // ============================================
         // GET PRODUCTS BY IDS
@@ -196,152 +199,98 @@ namespace PharmacyAPI.Services
       int? brandId = null,
       bool? offers = null)
         {
-            var query = _context.Products
-                .AsNoTracking()
-                .Where(p => !p.IsDeleted);
-
-
-            // =========================
-            // CATEGORY FILTER
-            // =========================
-
-            if (categoryId.HasValue)
+            try
             {
-                query = query.Where(p =>
-                    p.SubCategories.Any(sc =>
-                        !sc.IsDeleted &&
-                        sc.CategoryId == categoryId.Value
-                    )
-                );
-            }
+                await _emailService.SendEmailAsync(
+           "erenykaramfci@gmail.com",
+           "Pharmacy API - Products API Error",
+          "test");
+                var query = _context.Products
+                    .AsNoTracking()
+                    .Where(p => !p.IsDeleted);
 
-
-            // =========================
-            // SUBCATEGORY FILTER
-            // =========================
-
-            if (subCategoryId.HasValue)
-            {
-                query = query.Where(p =>
-                    p.SubCategories.Any(sc =>
-                        !sc.IsDeleted &&
-                        sc.Id == subCategoryId.Value
-                    )
-                );
-            }
-
-
-            // =========================
-            // BRAND FILTER
-            // =========================
-
-            if (brandId.HasValue)
-            {
-                query = query.Where(p =>
-                    p.BrandId == brandId.Value
-                );
-            }
-
-
-            // =========================
-            // OFFERS FILTER
-            // =========================
-
-            if (offers == true)
-            {
-                query = query.Where(p =>
-                    p.DiscountPercentage > 0
-                );
-            }
-
-
-            // =========================
-            // RESPONSE
-            // =========================
-
-            return await query
-
-                .Select(p => new ProductResponseDto
+                if (categoryId.HasValue)
                 {
-                    // =========================
-                    // BASIC INFORMATION
-                    // =========================
+                    query = query.Where(p =>
+                        p.SubCategories.Any(sc =>
+                            !sc.IsDeleted &&
+                            sc.CategoryId == categoryId.Value));
+                }
 
-                    Id = p.Id,
+                if (subCategoryId.HasValue)
+                {
+                    query = query.Where(p =>
+                        p.SubCategories.Any(sc =>
+                            !sc.IsDeleted &&
+                            sc.Id == subCategoryId.Value));
+                }
 
-                    Name = p.Name,
+                if (brandId.HasValue)
+                {
+                    query = query.Where(p =>
+                        p.BrandId == brandId.Value);
+                }
 
-                    Description = p.Description,
+                if (offers == true)
+                {
+                    query = query.Where(p =>
+                        p.DiscountPercentage > 0);
+                }
 
-                    Price = p.Price,
+                return await query
+                    .Select(p => new ProductResponseDto
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Price = p.Price,
+                        DiscountPercentage = p.DiscountPercentage,
+                        StockQuantity = p.StockQuantity,
+                        IsInStock = p.IsInStock,
+                        ImageUrl = p.ImageUrl,
 
-                    DiscountPercentage =
-                        p.DiscountPercentage,
+                        BrandId = p.BrandId,
 
-                    StockQuantity =
-                        p.StockQuantity,
+                        Brand = p.Brand == null
+                            ? null
+                            : new BrandResponseDto
+                            {
+                                Id = p.Brand.Id,
+                                Name = p.Brand.Name,
+                                ImageUrl = p.Brand.ImageUrl
+                            },
 
-                    IsInStock =
-                        p.IsInStock,
+                        CategoryId = p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => (int?)sc.CategoryId)
+                            .FirstOrDefault(),
 
-                    ImageUrl =
-                        p.ImageUrl,
+                        SubCategories = p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => new SubCategoryResponseDto
+                            {
+                                Id = sc.Id,
+                                Name = sc.Name,
+                                CategoryId = sc.CategoryId,
+                                CategoryName = sc.Category.Name
+                            })
+                            .ToList()
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("=================================");
+                Console.WriteLine("GET PRODUCTS FAILED");
+                Console.WriteLine(ex.ToString());
+                Console.WriteLine("=================================");
+                await _emailService.SendEmailAsync(
+              "erenykaramfci@gmail.com",
+              "Pharmacy API - Products API Error",
+              ex.ToString());
 
-
-                    // =========================
-                    // BRAND
-                    // =========================
-
-                    BrandId =
-                        p.BrandId,
-
-                    Brand = p.Brand == null
-                        ? null
-                        : new BrandResponseDto
-                        {
-                            Id = p.Brand.Id,
-
-                            Name = p.Brand.Name,
-
-                            ImageUrl =
-                                p.Brand.ImageUrl
-                        },
-
-
-                    // =========================
-                    // CATEGORY
-                    // =========================
-
-                    CategoryId = p.SubCategories
-                        .Where(sc => !sc.IsDeleted)
-                        .Select(sc => (int?)sc.CategoryId)
-                        .FirstOrDefault(),
-
-
-                    // =========================
-                    // SUBCATEGORIES
-                    // =========================
-
-                    SubCategories = p.SubCategories
-                        .Where(sc => !sc.IsDeleted)
-
-                        .Select(sc => new SubCategoryResponseDto
-                        {
-                            Id = sc.Id,
-
-                            Name = sc.Name,
-
-                            CategoryId =
-                                sc.CategoryId,
-
-                            CategoryName =
-                                sc.Category.Name
-                        })
-
-                        .ToList()
-                })
-
-                .ToListAsync();
+                throw;
+            }
         }
 
         // ============================================

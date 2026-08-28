@@ -39,6 +39,7 @@ builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<  IBrandService, BrandService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -123,6 +124,7 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+app.UseRouting();
 
 app.UseCors("AllowCors");
 
