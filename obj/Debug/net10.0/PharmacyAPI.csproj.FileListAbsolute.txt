@@ -326,3 +326,5 @@ D:\GitHub\cosmeticsAPI\obj\Debug\net10.0\refint\PharmacyAPI.dll
 D:\GitHub\cosmeticsAPI\obj\Debug\net10.0\PharmacyAPI.pdb
 D:\GitHub\cosmeticsAPI\obj\Debug\net10.0\PharmacyAPI.genruntimeconfig.cache
 D:\GitHub\cosmeticsAPI\obj\Debug\net10.0\ref\PharmacyAPI.dll
+D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\Prometheus.NetStandard.dll
+D:\GitHub\cosmeticsAPI\bin\Debug\net10.0\Prometheus.AspNetCore.dll

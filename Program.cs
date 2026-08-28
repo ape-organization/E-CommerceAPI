@@ -8,6 +8,7 @@ using PharmacyAPI.Models.Authentication;
 using PharmacyAPI.Services;
 using System.Text;
 using System.Text.Json.Serialization;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -129,6 +130,11 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+app.UseHttpMetrics();
+
 app.MapControllers();
+
+app.MapMetrics();
+
 
 app.Run();
