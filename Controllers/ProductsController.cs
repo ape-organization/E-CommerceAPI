@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
+using PharmacyAPI.Models.Responses;
 using PharmacyAPI.Services;
 
 namespace PharmacyAPI.Controllers
@@ -50,25 +52,169 @@ namespace PharmacyAPI.Controllers
         // GET: api/products
         // =====================================================
 
-
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> GetProducts(
-    [FromQuery] int? categoryId,
-    [FromQuery] int? subCategoryId,
-    [FromQuery] int? brandId,
-    [FromQuery] bool? offers)
+        public async Task<PagedResponse<ProductResponseDto>> GetProducts(
+    int page = 1,
+    int? categoryId = null,
+    int? subCategoryId = null,
+    int? brandId = null,
+    bool? offers = null)
         {
-            var products = await _productService.GetProducts(
-                categoryId,
-                subCategoryId,
-                brandId,
-                offers
-            );
+            try
+            {
+                const int pageSize = 100;
 
-            return Ok(products);
+                if (page < 1)
+                    page = 1;
+
+                var query = _context.Products
+                    .AsNoTracking()
+                    .Where(p => !p.IsDeleted);
+
+                // =========================
+                // FILTERS
+                // =========================
+
+                if (categoryId.HasValue)
+                {
+                    query = query.Where(p =>
+                        p.SubCategories.Any(sc =>
+                            !sc.IsDeleted &&
+                            sc.CategoryId == categoryId.Value));
+                }
+
+                if (subCategoryId.HasValue)
+                {
+                    query = query.Where(p =>
+                        p.SubCategories.Any(sc =>
+                            !sc.IsDeleted &&
+                            sc.Id == subCategoryId.Value));
+                }
+
+                if (brandId.HasValue)
+                {
+                    query = query.Where(p =>
+                        p.BrandId == brandId.Value);
+                }
+
+                if (offers == true)
+                {
+                    query = query.Where(p =>
+                        p.DiscountPercentage > 0);
+                }
+
+                // =========================
+                // ARE WE FILTERING?
+                // =========================
+
+                bool hasFilters =
+                    categoryId.HasValue ||
+                    subCategoryId.HasValue ||
+                    brandId.HasValue ||
+                    offers == true;
+
+                // =========================
+                // TOTAL
+                // =========================
+
+                var totalCount = await query.CountAsync();
+
+                // =========================
+                // PAGINATION
+                //
+                // NO FILTER = 100
+                // FILTER = ALL
+                // =========================
+
+                int totalPages;
+
+                if (hasFilters)
+                {
+                    totalPages = totalCount > 0 ? 1 : 0;
+                }
+                else
+                {
+                    totalPages =
+                        (int)Math.Ceiling(
+                            totalCount / (double)pageSize);
+
+                    query = query
+                        .OrderBy(p => p.Id)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize);
+                }
+
+                var products = await query
+                    .OrderBy(p => p.Id)
+                    .Select(p => new ProductResponseDto
+                    {
+                        Id = p.Id,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Price = p.Price,
+                        DiscountPercentage = p.DiscountPercentage,
+                        StockQuantity = p.StockQuantity,
+                        IsInStock = p.IsInStock,
+                        ImageUrl = p.ImageUrl,
+
+                        BrandId = p.BrandId,
+
+                        Brand = p.Brand == null
+                            ? null
+                            : new BrandResponseDto
+                            {
+                                Id = p.Brand.Id,
+                                Name = p.Brand.Name,
+                                ImageUrl = p.Brand.ImageUrl
+                            },
+
+                        CategoryId = p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => (int?)sc.CategoryId)
+                            .FirstOrDefault(),
+
+                        SubCategories = p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => new SubCategoryResponseDto
+                            {
+                                Id = sc.Id,
+                                Name = sc.Name,
+                                CategoryId = sc.CategoryId,
+                                CategoryName = sc.Category.Name
+                            })
+                            .ToList()
+                    })
+                    .ToListAsync();
+
+                return new PagedResponse<ProductResponseDto>
+                {
+                    Items = products,
+
+                    Page = hasFilters ? 1 : page,
+
+                    PageSize = hasFilters
+                        ? products.Count
+                        : pageSize,
+
+                    TotalCount = totalCount,
+
+                    TotalPages = totalPages,
+
+                    HasMore =
+                        !hasFilters &&
+                        page < totalPages
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+
+             
+
+                throw;
+            }
         }
-
 
         // =====================================================
         // GET ALL DISCOUNTED PRODUCTS

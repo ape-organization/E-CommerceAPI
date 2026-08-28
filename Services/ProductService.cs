@@ -2,16 +2,18 @@
 using PharmacyAPI.Data;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
+using PharmacyAPI.Models.Responses;
 
 namespace PharmacyAPI.Services
 {
     public interface IProductService
     {
-        Task<List<ProductResponseDto>> GetProducts(
-     int? categoryId = null,
-     int? subCategoryId = null,
-     int? brandId = null,
-     bool? offers = null);
+        Task<PagedResponse<ProductResponseDto>> GetProducts(
+      int page = 1,
+      int? categoryId = null,
+      int? subCategoryId = null,
+      int? brandId = null,
+      bool? offers = null);
 
         Task<ProductResponseDto?> GetProduct(int id);
 
@@ -193,21 +195,27 @@ namespace PharmacyAPI.Services
         // GET ALL PRODUCTS
         // ============================================
 
-        public async Task<List<ProductResponseDto>> GetProducts(
-      int? categoryId = null,
-      int? subCategoryId = null,
-      int? brandId = null,
-      bool? offers = null)
+        public async Task<PagedResponse<ProductResponseDto>> GetProducts(
+            int page = 1,
+            int? categoryId = null,
+            int? subCategoryId = null,
+            int? brandId = null,
+            bool? offers = null)
         {
             try
             {
-                await _emailService.SendEmailAsync(
-           "erenykaramfci@gmail.com",
-           "Pharmacy API - Products API Error",
-          "test");
+                const int pageSize = 100;
+
+                if (page < 1)
+                    page = 1;
+
                 var query = _context.Products
                     .AsNoTracking()
                     .Where(p => !p.IsDeleted);
+
+                // =========================
+                // FILTERS
+                // =========================
 
                 if (categoryId.HasValue)
                 {
@@ -237,7 +245,49 @@ namespace PharmacyAPI.Services
                         p.DiscountPercentage > 0);
                 }
 
-                return await query
+                // =========================
+                // ARE WE FILTERING?
+                // =========================
+
+                bool hasFilters =
+                    categoryId.HasValue ||
+                    subCategoryId.HasValue ||
+                    brandId.HasValue ||
+                    offers == true;
+
+                // =========================
+                // TOTAL
+                // =========================
+
+                var totalCount = await query.CountAsync();
+
+                // =========================
+                // PAGINATION
+                //
+                // NO FILTER = 100
+                // FILTER = ALL
+                // =========================
+
+                int totalPages;
+
+                if (hasFilters)
+                {
+                    totalPages = totalCount > 0 ? 1 : 0;
+                }
+                else
+                {
+                    totalPages =
+                        (int)Math.Ceiling(
+                            totalCount / (double)pageSize);
+
+                    query = query
+                        .OrderBy(p => p.Id)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize);
+                }
+
+                var products = await query
+                    .OrderBy(p => p.Id)
                     .Select(p => new ProductResponseDto
                     {
                         Id = p.Id,
@@ -277,22 +327,44 @@ namespace PharmacyAPI.Services
                             .ToList()
                     })
                     .ToListAsync();
+
+                return new PagedResponse<ProductResponseDto>
+                {
+                    Items = products,
+
+                    Page = hasFilters ? 1 : page,
+
+                    PageSize = hasFilters
+                        ? products.Count
+                        : pageSize,
+
+                    TotalCount = totalCount,
+
+                    TotalPages = totalPages,
+
+                    HasMore =
+                        !hasFilters &&
+                        page < totalPages
+                };
             }
             catch (Exception ex)
             {
-                Console.WriteLine("=================================");
-                Console.WriteLine("GET PRODUCTS FAILED");
-                Console.WriteLine(ex.ToString());
-                Console.WriteLine("=================================");
-                await _emailService.SendEmailAsync(
-              "erenykaramfci@gmail.com",
-              "Pharmacy API - Products API Error",
-              ex.ToString());
+                Console.WriteLine(ex);
+
+                try
+                {
+                    await _emailService.SendEmailAsync(
+                        "erenykaramfci@gmail.com",
+                        "Pharmacy API - Products API Error",
+                        ex.ToString());
+                }
+                catch
+                {
+                }
 
                 throw;
             }
         }
-
         // ============================================
         // GET PRODUCT BY ID
         // ============================================
