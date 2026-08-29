@@ -265,6 +265,13 @@ namespace PharmacyAPI.Controllers
                 if (userExists != null)
                 {
                    
+                    if(userExists.IsActive==false)
+                    {
+                        userExists.Name = UserDto.Name;
+                        userExists.IsActive = true;
+                        await userManager.UpdateAsync(userExists);
+                        return Ok(new { Status = true, Message = "User reactivated successfully!" });
+                    }
                     return Ok(new  { Status = false, Message = "User already exists!" });
                 }
                 ApplicationUser user = new ApplicationUser()

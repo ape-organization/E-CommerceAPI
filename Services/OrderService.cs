@@ -86,7 +86,7 @@ namespace PharmacyAPI.Services
             {
                 ClientId = client.Id,
                 OrderDate = DateTime.UtcNow,
-                Status = OrderStatus.Pending,
+                Status = OrderStatus.Confirmed,
                 TotalAmount = 0,
 
                 // Important: let EF Core manage the relationship

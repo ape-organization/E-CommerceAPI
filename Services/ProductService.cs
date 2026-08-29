@@ -27,6 +27,8 @@ namespace PharmacyAPI.Services
 
         Task<bool> CheckProductExists(string name);
         Task<IEnumerable<Product>> GetDiscountedProducts();
+        Task<List<ProductResponseDto>> GetProductsByName(
+           string name);
 
         Task<bool> RemoveDiscount(int id);
         Task<List<ProductResponseDto>> GetProductsByIds(
@@ -50,6 +52,93 @@ namespace PharmacyAPI.Services
             _environment = environment;
             _emailService = emailService;
         }
+        // ============================================
+        // GET PRODUCTS BY NAME
+        // ============================================
+
+        public async Task<List<ProductResponseDto>> GetProductsByName(
+            string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return new List<ProductResponseDto>();
+            }
+
+            name = name.Trim();
+
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeleted &&
+                    EF.Functions.Like(
+                        p.Name,
+                        $"%{name}%"
+                    ))
+                .OrderBy(p => p.Id)
+                .Select(p => new ProductResponseDto
+                {
+                    Id = p.Id,
+
+                    Name = p.Name,
+
+                    Description = p.Description,
+
+                    Price = p.Price,
+
+                    DiscountPercentage =
+                        p.DiscountPercentage,
+
+                    StockQuantity =
+                        p.StockQuantity,
+
+                    IsInStock =
+                        p.IsInStock,
+
+                    ImageUrl =
+                        p.ImageUrl,
+
+                    BrandId =
+                        p.BrandId,
+
+                    Brand = p.Brand == null
+                        ? null
+                        : new BrandResponseDto
+                        {
+                            Id = p.Brand.Id,
+
+                            Name = p.Brand.Name,
+
+                            ImageUrl =
+                                p.Brand.ImageUrl
+                        },
+
+                    CategoryId =
+                        p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => (int?)sc.CategoryId)
+                            .FirstOrDefault(),
+
+                    SubCategories =
+                        p.SubCategories
+                            .Where(sc => !sc.IsDeleted)
+                            .Select(sc => new SubCategoryResponseDto
+                            {
+                                Id = sc.Id,
+
+                                Name = sc.Name,
+
+                                CategoryId =
+                                    sc.CategoryId,
+
+                                CategoryName =
+                                    sc.Category.Name
+                            })
+                            .ToList()
+                })
+                .ToListAsync();
+        }
+
+
         // ============================================
         // GET PRODUCTS BY IDS
         // ============================================

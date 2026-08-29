@@ -216,6 +216,8 @@ namespace PharmacyAPI.Controllers
             }
         }
 
+      
+        
         // =====================================================
         // GET ALL DISCOUNTED PRODUCTS
         // GET: api/products/discounted
@@ -410,7 +412,25 @@ namespace PharmacyAPI.Controllers
                 message = "Product deleted successfully."
             });
         }
+        [HttpGet("by-name")]
+        public async Task<ActionResult<ProductResponseDto>> GetProductByName(
+    [FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest("Product name is required.");
+            }
 
+            var product =
+                await _productService.GetProductsByName(name);
+
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(product);
+        }
 
         // =====================================================
         // CHECK PRODUCT NAME

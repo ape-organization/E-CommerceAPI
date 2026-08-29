@@ -591,6 +591,32 @@
   },
   {
     "ContainingType": "PharmacyAPI.Controllers.ProductsController",
+    "Method": "GetProductByName",
+    "RelativePath": "api/Products/by-name",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "name",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "PharmacyAPI.Models.RequestsModels.ProductResponseDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.ProductsController",
     "Method": "GetCartProducts",
     "RelativePath": "api/Products/cart",
     "HttpMethod": "POST",
