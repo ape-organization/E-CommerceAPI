@@ -17,19 +17,19 @@ builder.Services.AddControllers()
     .AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
 // EF Core
-//builder.Services.AddDbContext<PharmacyDbContext>(opt =>
-//    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-// EF Core
 builder.Services.AddDbContext<PharmacyDbContext>(opt =>
-    opt.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null);
-        }));
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// EF Core
+//builder.Services.AddDbContext<PharmacyDbContext>(opt =>
+//    opt.UseSqlServer(
+//        builder.Configuration.GetConnectionString("DefaultConnection"),
+//        sqlOptions =>
+//        {
+//            sqlOptions.EnableRetryOnFailure(
+//                maxRetryCount: 5,
+//                maxRetryDelay: TimeSpan.FromSeconds(10),
+//                errorNumbersToAdd: null);
+//        }));
 
 // Identity
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(opt =>
