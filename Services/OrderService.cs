@@ -249,30 +249,14 @@ namespace PharmacyAPI.Services
                 return false;
 
 
-            if (order.Status == OrderStatus.Delivered)
-            {
-                throw new InvalidOperationException(
-                    "Delivered orders cannot be cancelled.");
-            }
+         
 
 
             if (order.Status == OrderStatus.Cancelled)
                 return true;
 
 
-            // Return products to stock
-            foreach (var item in order.Items)
-            {
-                var product = await _context.Products
-                    .FirstOrDefaultAsync(p =>
-                        p.Id == item.ProductId);
-
-
-                if (product != null)
-                {
-                    product.StockQuantity += item.Quantity;
-                }
-            }
+            
 
 
             order.Status = OrderStatus.Cancelled;
