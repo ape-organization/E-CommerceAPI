@@ -57,3 +57,14 @@ wwwroot\uploads\categories\c93e9e08-ad50-47dc-8336-963bf27af933.webp
 wwwroot\uploads\categories\e29a4de3-22b7-4c5d-a2b6-a7d776358c22.png
 wwwroot\uploads\categories\fbc9f7a0-55bc-453b-937e-2ec053a53829.jfif
 wwwroot\uploads\categories\ffa38d65-c1a4-4b66-a432-a22615d7592f.png
+wwwroot\uploads\categories\53ec8b85-6caa-4893-8938-dfaffba427d0.png
+wwwroot\uploads\categories\ddfd64b4-3e89-4e32-8306-321bbed9b2fa.png
+wwwroot\uploads\categories\435ff231-fdf6-4057-994c-9a04f521a99a.png
+wwwroot\uploads\brands\e8d3dada-6210-420f-9721-8121668ef4e4.png
+wwwroot\uploads\brands\0d3c6abf-4e85-4426-a8c2-54a4d1945395.png
+wwwroot\uploads\brands\e8976f16-8ab1-41bb-bc76-27bb2d15c76a.png
+wwwroot\images\5dd7dd58-adfa-47aa-8b09-043ad8b2306b.jfif
+wwwroot\images\1b55f4ba-18db-4e52-baa6-64087cd7574b.jfif
+wwwroot\uploads\brands\753ccfd09f274bf1bc452b2d6cd92cb9.png
+wwwroot\uploads\categories\2949500990f84ab68aff68a49e648387.png
+wwwroot\images\34500c0fd33241e3b4dc09f3299150a9.png

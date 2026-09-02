@@ -7,25 +7,31 @@ namespace PharmacyAPI.Services
 {
     public interface IBrandService
     {
-        Task<List<Brand>> GetBrands();
+        Task<List<Brand>> GetBrands(
+            CancellationToken cancellationToken = default);
 
-        Task<Brand?> GetBrand(int id);
+        Task<Brand?> GetBrand(
+            int id,
+            CancellationToken cancellationToken = default);
 
-        Task<Brand?> CreateBrand(
-            BrandRequest request);
+        Task<Brand> CreateBrand(
+            BrandRequest request,
+            CancellationToken cancellationToken = default);
 
         Task<bool> UpdateBrand(
             int id,
-            BrandRequest request);
+            BrandRequest request,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> DeleteBrand(int id);
+        Task<bool> DeleteBrand(
+            int id,
+            CancellationToken cancellationToken = default);
     }
 
 
     public class BrandService : IBrandService
     {
         private readonly PharmacyDbContext _context;
-
         private readonly IWebHostEnvironment _environment;
 
 
@@ -42,15 +48,14 @@ namespace PharmacyAPI.Services
         // GET ALL BRANDS
         // =====================================================
 
-        public async Task<List<Brand>> GetBrands()
+        public async Task<List<Brand>> GetBrands(
+            CancellationToken cancellationToken = default)
         {
             return await _context.Brand
-
+                .AsNoTracking()
                 .Where(b => !b.IsDeleted)
-
-                .OrderBy(b => b.Name)
-
-                .ToListAsync();
+                .OrderBy(b => b.NameEn)
+                .ToListAsync(cancellationToken);
         }
 
 
@@ -58,17 +63,17 @@ namespace PharmacyAPI.Services
         // GET BRAND
         // =====================================================
 
-        public async Task<Brand?> GetBrand(int id)
+        public async Task<Brand?> GetBrand(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             return await _context.Brand
-
-                .Include(b => b.Products)
-
+                .AsNoTracking()
                 .FirstOrDefaultAsync(
                     b =>
                         b.Id == id &&
-                        !b.IsDeleted
-                );
+                        !b.IsDeleted,
+                    cancellationToken);
         }
 
 
@@ -76,39 +81,37 @@ namespace PharmacyAPI.Services
         // CREATE BRAND
         // =====================================================
 
-        public async Task<Brand?> CreateBrand(
-            BrandRequest request)
+        public async Task<Brand> CreateBrand(
+            BrandRequest request,
+            CancellationToken cancellationToken = default)
         {
-            if (request == null)
-            {
-                return null;
-            }
+            ArgumentNullException.ThrowIfNull(request);
 
 
             var brand = new Brand
             {
-                Name = request.Name.Trim(),
-
+                NameEn = request.NameEn?.Trim() ?? string.Empty,
+                NameAr = request.NameAr?.Trim() ?? string.Empty,
                 IsDeleted = false
             };
 
 
-            // =================================================
-            // SAVE IMAGE
-            // =================================================
+            // -------------------------------------------------
+            // IMAGE
+            // -------------------------------------------------
 
-            if (request.Image != null)
+            if (request.Image is not null)
             {
-                brand.ImageUrl =
-                    await SaveImage(
-                        request.Image
-                    );
+                brand.ImageUrl = await SaveImage(
+                    request.Image,
+                    cancellationToken);
             }
 
 
             _context.Brand.Add(brand);
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(
+                cancellationToken);
 
 
             return brand;
@@ -121,48 +124,76 @@ namespace PharmacyAPI.Services
 
         public async Task<bool> UpdateBrand(
             int id,
-            BrandRequest request)
+            BrandRequest request,
+            CancellationToken cancellationToken = default)
         {
-            var brand =
-                await _context.Brand
-                    .FirstOrDefaultAsync(
-                        b =>
-                            b.Id == id &&
-                            !b.IsDeleted
-                    );
+            ArgumentNullException.ThrowIfNull(request);
 
 
-            if (brand == null)
+            var brand = await _context.Brand
+                .FirstOrDefaultAsync(
+                    b =>
+                        b.Id == id &&
+                        !b.IsDeleted,
+                    cancellationToken);
+
+
+            if (brand is null)
             {
                 return false;
             }
 
 
-            brand.Name =
-                request.Name.Trim();
+            brand.NameEn =
+                request.NameEn?.Trim() ?? string.Empty;
+
+            brand.NameAr =
+                request.NameAr?.Trim() ?? string.Empty;
 
 
-            // =================================================
+            string? oldImageUrl = null;
+
+
+            // -------------------------------------------------
             // NEW IMAGE
-            // =================================================
+            // -------------------------------------------------
 
-            if (request.Image != null)
+            if (request.Image is not null)
             {
-                // Delete old image
-                DeleteImage(
-                    brand.ImageUrl
-                );
+                oldImageUrl = brand.ImageUrl;
 
-
-                // Save new image
-                brand.ImageUrl =
-                    await SaveImage(
-                        request.Image
-                    );
+                brand.ImageUrl = await SaveImage(
+                    request.Image,
+                    cancellationToken);
             }
 
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync(
+                    cancellationToken);
+            }
+            catch
+            {
+                // Database update failed.
+                // Remove the newly created image.
+                if (request.Image is not null)
+                {
+                    DeleteImage(brand.ImageUrl);
+                }
+
+                throw;
+            }
+
+
+            // -------------------------------------------------
+            // DELETE OLD IMAGE AFTER DB SUCCESS
+            // -------------------------------------------------
+
+            if (!string.IsNullOrWhiteSpace(oldImageUrl))
+            {
+                DeleteImage(oldImageUrl);
+            }
 
 
             return true;
@@ -173,25 +204,30 @@ namespace PharmacyAPI.Services
         // DELETE BRAND
         // =====================================================
 
-        public async Task<bool> DeleteBrand(int id)
+        public async Task<bool> DeleteBrand(
+            int id,
+            CancellationToken cancellationToken = default)
         {
-            var brand =
-                await _context.Brand
-                    .FirstOrDefaultAsync(
-                        b => b.Id == id
-                    );
+            var brand = await _context.Brand
+                .FirstOrDefaultAsync(
+                    b =>
+                        b.Id == id &&
+                        !b.IsDeleted,
+                    cancellationToken);
 
 
-            if (brand == null)
+            if (brand is null)
             {
                 return false;
             }
 
 
+            // Soft delete
             brand.IsDeleted = true;
 
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(
+                cancellationToken);
 
 
             return true;
@@ -203,54 +239,90 @@ namespace PharmacyAPI.Services
         // =====================================================
 
         private async Task<string> SaveImage(
-            IFormFile image)
+            IFormFile image,
+            CancellationToken cancellationToken)
         {
-            var uploadsFolder =
-                Path.Combine(
-                    _environment.WebRootPath,
-                    "uploads",
-                    "brands"
-                );
-
-
-            if (!Directory.Exists(uploadsFolder))
+            if (image.Length == 0)
             {
-                Directory.CreateDirectory(
-                    uploadsFolder
-                );
+                throw new ArgumentException(
+                    "Invalid image.");
             }
+
+
+            // -------------------------------------------------
+            // ALLOWED EXTENSIONS
+            // -------------------------------------------------
+
+            var allowedExtensions = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp",
+                ".jfif"
+            };
 
 
             var extension =
-                Path.GetExtension(
-                    image.FileName
-                );
+                Path.GetExtension(image.FileName);
 
 
-            var fileName =
-                $"{Guid.NewGuid()}{extension}";
-
-
-            var filePath =
-                Path.Combine(
-                    uploadsFolder,
-                    fileName
-                );
-
-
-            using (
-                var stream =
-                    new FileStream(
-                        filePath,
-                        FileMode.Create
-                    )
-            )
+            if (!allowedExtensions.Contains(extension))
             {
-                await image.CopyToAsync(
-                    stream
-                );
+                throw new ArgumentException(
+                    "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
             }
 
+
+            // -------------------------------------------------
+            // UPLOAD DIRECTORY
+            // -------------------------------------------------
+
+            var uploadsFolder = Path.Combine(
+                _environment.WebRootPath,
+                "uploads",
+                "brands");
+
+
+            Directory.CreateDirectory(
+                uploadsFolder);
+
+
+            // -------------------------------------------------
+            // UNIQUE FILE NAME
+            // -------------------------------------------------
+
+            var fileName =
+                $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+
+
+            var filePath = Path.Combine(
+                uploadsFolder,
+                fileName);
+
+
+            // -------------------------------------------------
+            // SAVE FILE
+            // -------------------------------------------------
+
+            await using var stream = new FileStream(
+                filePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 64 * 1024,
+                useAsync: true);
+
+
+            await image.CopyToAsync(
+                stream,
+                cancellationToken);
+
+
+            // -------------------------------------------------
+            // DATABASE PATH
+            // -------------------------------------------------
 
             return $"/uploads/brands/{fileName}";
         }
@@ -263,30 +335,40 @@ namespace PharmacyAPI.Services
         private void DeleteImage(
             string? imageUrl)
         {
-            if (string.IsNullOrEmpty(imageUrl))
+            if (string.IsNullOrWhiteSpace(imageUrl))
             {
                 return;
             }
 
 
             var fileName =
-                Path.GetFileName(
-                    imageUrl
-                );
+                Path.GetFileName(imageUrl);
 
 
-            var filePath =
-                Path.Combine(
-                    _environment.WebRootPath,
-                    "uploads",
-                    "brands",
-                    fileName
-                );
-
-
-            if (File.Exists(filePath))
+            if (string.IsNullOrWhiteSpace(fileName))
             {
-                File.Delete(filePath);
+                return;
+            }
+
+
+            var filePath = Path.Combine(
+                _environment.WebRootPath,
+                "uploads",
+                "brands",
+                fileName);
+
+
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+            }
+            catch
+            {
+                // Image deletion should not cause
+                // the database operation to fail.
             }
         }
     }

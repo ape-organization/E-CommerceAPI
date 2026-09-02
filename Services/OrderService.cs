@@ -1,4 +1,4 @@
-﻿
+﻿using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
 using PharmacyAPI.Models;
@@ -8,20 +8,31 @@ namespace PharmacyAPI.Services
 {
     public interface IOrderService
     {
-        Task<Order> CreateOrder(CreateOrderDto dto);
+        Task<Order> CreateOrder(
+            CreateOrderDto dto,
+            CancellationToken cancellationToken = default);
 
-        Task<OrderDto?> GetOrder(int id);
+        Task<OrderDto?> GetOrder(
+            int id,
+            CancellationToken cancellationToken = default);
 
-        Task<List<OrderDto>> GetOrders();
+        Task<List<OrderDto>> GetOrders(
+            CancellationToken cancellationToken = default);
 
-        Task<List<OrderDto>> GetOrdersByClient(int clientId);
+        Task<List<OrderDto>> GetOrdersByClient(
+            int clientId,
+            CancellationToken cancellationToken = default);
 
         Task<bool> UpdateOrderStatus(
             int id,
-            string status);
+            string status,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> CancelOrder(int id);
+        Task<bool> CancelOrder(
+            int id,
+            CancellationToken cancellationToken = default);
     }
+
     public class OrderService : IOrderService
     {
         private readonly PharmacyDbContext _context;
@@ -31,192 +42,248 @@ namespace PharmacyAPI.Services
             _context = context;
         }
 
-
-        // ============================================
+        // =====================================================
         // CREATE ORDER
-        // ============================================
+        // =====================================================
 
-        public async Task<Order> CreateOrder(CreateOrderDto dto)
+        public async Task<Order> CreateOrder(
+            CreateOrderDto dto,
+            CancellationToken cancellationToken = default)
         {
             if (dto.Client == null)
+            {
                 throw new InvalidOperationException(
                     "Client information is required.");
+            }
 
             if (string.IsNullOrWhiteSpace(dto.Client.PhoneNumber))
+            {
                 throw new InvalidOperationException(
                     "Client phone number is required.");
+            }
 
-            if (dto.Items == null || !dto.Items.Any())
+            if (dto.Items == null || dto.Items.Count == 0)
+            {
                 throw new InvalidOperationException(
                     "Order must contain at least one item.");
-
-            // Find client by phone
-            var client = await _context.Clients
-                .FirstOrDefaultAsync(x =>
-                    x.PhoneNumber == dto.Client.PhoneNumber);
-
-            // Create client if not found
-            if (client == null)
-            {
-                client = new Client
-                {
-                    Name = dto.Client.Name,
-                    PhoneNumber = dto.Client.PhoneNumber,
-                    Address = dto.Client.Address,
-                    Email = dto.Client.Email,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Clients.Add(client);
-
-                // We need the Client.Id before creating the Order
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                // Update client information
-                client.Name = dto.Client.Name;
-                client.Address = dto.Client.Address;
-                client.Email = dto.Client.Email;
-                client.UpdatedAt = DateTime.UtcNow;
             }
 
-            // Create Order
-            var order = new Order
+            // =================================================
+            // VALIDATE ITEMS
+            // =================================================
+
+            foreach (var item in dto.Items)
             {
-                ClientId = client.Id,
-                OrderDate = DateTime.UtcNow,
-                Status = OrderStatus.Confirmed,
-                TotalAmount = 0,
-
-                // Important: let EF Core manage the relationship
-                Items = new List<OrderItem>()
-            };
-
-            decimal total = 0;
-
-            foreach (var itemDto in dto.Items)
-            {
-                if (itemDto.Quantity <= 0)
+                if (item.Quantity <= 0)
                 {
                     throw new InvalidOperationException(
                         "Quantity must be greater than zero.");
                 }
 
-                var product = await _context.Products
-                    .FirstOrDefaultAsync(x =>
-                        x.Id == itemDto.ProductId &&
-                        !x.IsDeleted);
-
-                if (product == null)
+                if (item.ProductId <= 0)
                 {
-                    throw new KeyNotFoundException(
-                        $"Product {itemDto.ProductId} not found.");
+                    throw new InvalidOperationException(
+                        "Invalid product ID.");
                 }
+            }
+
+            // =================================================
+            // GET ALL PRODUCTS IN ONE QUERY
+            //
+            // Prevents N+1 queries.
+            // =================================================
+
+            var productIds = dto.Items
+                .Select(x => x.ProductId)
+                .Distinct()
+                .ToList();
+
+            var products = await _context.Products
+                .AsNoTracking()
+                .Where(p =>
+                    productIds.Contains(p.Id) &&
+                    !p.IsDeleted)
+                .ToDictionaryAsync(
+                    p => p.Id,
+                    cancellationToken);
+
+            // =================================================
+            // CHECK ALL PRODUCTS EXIST
+            // =================================================
+
+            if (products.Count != productIds.Count)
+            {
+                var missingProductId = productIds
+                    .First(id => !products.ContainsKey(id));
+
+                throw new KeyNotFoundException(
+                    $"Product {missingProductId} not found.");
+            }
+
+            // =================================================
+            // FIND CLIENT
+            // =================================================
+
+            var phoneNumber = dto.Client.PhoneNumber.Trim();
+
+            var client = await _context.Clients
+                .FirstOrDefaultAsync(
+                    x => x.PhoneNumber == phoneNumber,
+                    cancellationToken);
+
+            var now = DateTime.UtcNow;
+
+            // =================================================
+            // CREATE CLIENT IF NEEDED
+            // =================================================
+
+            if (client == null)
+            {
+                client = new Client
+                {
+                    Name = dto.Client.Name?.Trim(),
+                    PhoneNumber = phoneNumber,
+                    Address = dto.Client.Address?.Trim(),
+                    Email = string.IsNullOrWhiteSpace(dto.Client.Email)
+                        ? null
+                        : dto.Client.Email.Trim(),
+                    CreatedAt = now
+                };
+
+                _context.Clients.Add(client);
+
+                // Client.Id is generated by SQL Server,
+                // therefore save it before using ClientId.
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                client.Name = dto.Client.Name?.Trim();
+                client.Address = dto.Client.Address?.Trim();
+
+                client.Email =
+                    string.IsNullOrWhiteSpace(dto.Client.Email)
+                        ? null
+                        : dto.Client.Email.Trim();
+
+                client.UpdatedAt = now;
+            }
+
+            // =================================================
+            // CREATE ORDER
+            // =================================================
+
+            var order = new Order
+            {
+                ClientId = client.Id,
+                OrderDate = now,
+                Status = OrderStatus.Confirmed,
+                TotalAmount = 0,
+                Items = new List<OrderItem>()
+            };
+
+            decimal total = 0;
+
+            // =================================================
+            // CREATE ORDER ITEMS
+            // =================================================
+
+            foreach (var itemDto in dto.Items)
+            {
+                var product = products[itemDto.ProductId];
 
                 var unitPrice = product.Price;
 
-                var subtotal = unitPrice * itemDto.Quantity;
-
-                var orderItem = new OrderItem
-                {
-                    ProductId = product.Id,
-                    Quantity = itemDto.Quantity,
-                    UnitPrice = unitPrice
-                };
-
-                // IMPORTANT:
-                // Don't set OrderId manually.
-                // Add the item to the Order's collection.
-                order.Items.Add(orderItem);
+                var subtotal =
+                    unitPrice * itemDto.Quantity;
 
                 total += subtotal;
+
+                order.Items.Add(
+                    new OrderItem
+                    {
+                        ProductId = product.Id,
+                        Quantity = itemDto.Quantity,
+                        UnitPrice = unitPrice
+                    });
             }
 
             order.TotalAmount = total;
 
-            // Add the complete object graph
+            // =================================================
+            // SAVE ORDER
+            // =================================================
+
             _context.Orders.Add(order);
 
-            // EF will:
-            // 1. Insert Order
-            // 2. Get generated Order.Id
-            // 3. Insert OrderItems with the correct OrderId
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(
+                cancellationToken);
 
             return order;
         }
-        // ============================================
+
+        // =====================================================
         // GET ALL ORDERS
-        // ============================================
+        // =====================================================
 
-        public async Task<List<OrderDto>> GetOrders()
+        public async Task<List<OrderDto>> GetOrders(
+            CancellationToken cancellationToken = default)
         {
             return await _context.Orders
                 .AsNoTracking()
-                .Include(o => o.Client)
-                .Include(o => o.Items)
-                    .ThenInclude(i => i.Product)
                 .OrderByDescending(o => o.OrderDate)
-                .Select(o => MapOrder(o))
-                .ToListAsync();
+                .Select(OrderProjection())
+                .ToListAsync(cancellationToken);
         }
 
-
-        // ============================================
+        // =====================================================
         // GET ORDER BY ID
-        // ============================================
+        // =====================================================
 
-        public async Task<OrderDto?> GetOrder(int id)
+        public async Task<OrderDto?> GetOrder(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             return await _context.Orders
                 .AsNoTracking()
-                .Include(o => o.Client)
-                .Include(o => o.Items)
-                    .ThenInclude(i => i.Product)
                 .Where(o => o.Id == id)
-                .Select(o => MapOrder(o))
-                .FirstOrDefaultAsync();
+                .Select(OrderProjection())
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
-
-        // ============================================
-        // GET CLIENT ORDERS
-        // ============================================
+        // =====================================================
+        // GET ORDERS BY CLIENT
+        // =====================================================
 
         public async Task<List<OrderDto>> GetOrdersByClient(
-            int clientId)
+            int clientId,
+            CancellationToken cancellationToken = default)
         {
             return await _context.Orders
                 .AsNoTracking()
-                .Include(o => o.Client)
-                .Include(o => o.Items)
-                    .ThenInclude(i => i.Product)
                 .Where(o => o.ClientId == clientId)
                 .OrderByDescending(o => o.OrderDate)
-                .Select(o => MapOrder(o))
-                .ToListAsync();
+                .Select(OrderProjection())
+                .ToListAsync(cancellationToken);
         }
 
-
-        // ============================================
+        // =====================================================
         // UPDATE ORDER STATUS
-        // ============================================
+        // =====================================================
 
         public async Task<bool> UpdateOrderStatus(
             int id,
-            string status)
+            string status,
+            CancellationToken cancellationToken = default)
         {
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(o => o.Id == id);
-
-
-            if (order == null)
-                return false;
-
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                throw new InvalidOperationException(
+                    "Order status is required.");
+            }
 
             if (!Enum.TryParse<OrderStatus>(
-                    status,
+                    status.Trim(),
                     true,
                     out var orderStatus))
             {
@@ -224,57 +291,67 @@ namespace PharmacyAPI.Services
                     "Invalid order status.");
             }
 
-
-            order.Status = orderStatus;
-
-
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-
-        // ============================================
-        // CANCEL ORDER
-        // ============================================
-
-        public async Task<bool> CancelOrder(int id)
-        {
             var order = await _context.Orders
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == id);
-
+                .FirstOrDefaultAsync(
+                    o => o.Id == id,
+                    cancellationToken);
 
             if (order == null)
                 return false;
 
-
-         
-
-
-            if (order.Status == OrderStatus.Cancelled)
+            // Nothing to update
+            if (order.Status == orderStatus)
                 return true;
 
+            order.Status = orderStatus;
 
-            
-
-
-            order.Status = OrderStatus.Cancelled;
-
-
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(
+                cancellationToken);
 
             return true;
         }
 
+        // =====================================================
+        // CANCEL ORDER
+        // =====================================================
 
-        // ============================================
-        // MAPPING
-        // ============================================
-
-        private static OrderDto MapOrder(Order o)
+        public async Task<bool> CancelOrder(
+            int id,
+            CancellationToken cancellationToken = default)
         {
-            return new OrderDto
+            // No Include(Items) needed.
+            // We only change the order status.
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(
+                    o => o.Id == id,
+                    cancellationToken);
+
+            if (order == null)
+                return false;
+
+            // Already cancelled
+            if (order.Status == OrderStatus.Cancelled)
+                return true;
+
+            order.Status = OrderStatus.Cancelled;
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
+            return true;
+        }
+
+        // =====================================================
+        // ORDER PROJECTION
+        //
+        // EF translates this directly to SQL.
+        // No Include() is required.
+        // =====================================================
+
+        private static Expression<Func<Order, OrderDto>>
+            OrderProjection()
+        {
+            return o => new OrderDto
             {
                 Id = o.Id,
 
@@ -294,24 +371,25 @@ namespace PharmacyAPI.Services
 
                 Status = o.Status.ToString(),
 
-                Items = o.Items.Select(i => new OrderItemDto
-                {
-                    Id = i.Id,
+                Items = o.Items
+                    .Select(i => new OrderItemDto
+                    {
+                        Id = i.Id,
 
-                    ProductId = i.ProductId,
+                        ProductId = i.ProductId,
 
-                    ProductName = i.Product.Name,
+                        ProductName = i.Product.NameEn,
 
-                    ImageUrl = i.Product.ImageUrl,
+                        ImageUrl = i.Product.ImageUrl,
 
-                    Quantity = i.Quantity,
+                        Quantity = i.Quantity,
 
-                    UnitPrice = i.UnitPrice,
+                        UnitPrice = i.UnitPrice,
 
-                    TotalPrice =
-                        i.UnitPrice * i.Quantity
-
-                }).ToList()
+                        TotalPrice =
+                            i.UnitPrice * i.Quantity
+                    })
+                    .ToList()
             };
         }
     }

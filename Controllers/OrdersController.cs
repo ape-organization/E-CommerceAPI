@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PharmacyAPI.Data;
-using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Services;
 
@@ -21,27 +18,25 @@ namespace PharmacyAPI.Controllers
             _orderService = orderService;
         }
 
-
-        // ============================================
+        // =====================================================
         // CREATE ORDER
         // POST: api/orders
-        // ============================================
+        // =====================================================
 
         [HttpPost]
         [AllowAnonymous]
-
         public async Task<IActionResult> CreateOrder(
-       [FromBody] CreateOrderDto dto)
+            [FromBody] CreateOrderDto dto,
+            CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             try
             {
-                var order =
-                    await _orderService.CreateOrder(dto);
+                var order = await _orderService.CreateOrder(
+                    dto,
+                    cancellationToken);
 
                 return CreatedAtAction(
                     nameof(GetOrder),
@@ -63,34 +58,35 @@ namespace PharmacyAPI.Controllers
                 });
             }
         }
-       
-        
-        
-        // ============================================
+
+        // =====================================================
         // GET ALL ORDERS
         // GET: api/orders
-        // ============================================
+        // =====================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetOrders()
+        public async Task<IActionResult> GetOrders(
+            CancellationToken cancellationToken)
         {
-            var orders =
-                await _orderService.GetOrders();
+            var orders = await _orderService.GetOrders(
+                cancellationToken);
 
             return Ok(orders);
         }
 
-
-        // ============================================
+        // =====================================================
         // GET ORDER
         // GET: api/orders/5
-        // ============================================
+        // =====================================================
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetOrder(int id)
+        public async Task<IActionResult> GetOrder(
+            int id,
+            CancellationToken cancellationToken)
         {
-            var order =
-                await _orderService.GetOrder(id);
+            var order = await _orderService.GetOrder(
+                id,
+                cancellationToken);
 
             if (order == null)
             {
@@ -103,40 +99,42 @@ namespace PharmacyAPI.Controllers
             return Ok(order);
         }
 
-
-        // ============================================
+        // =====================================================
         // GET CLIENT ORDERS
         // GET: api/orders/client/5
-        // ============================================
+        // =====================================================
 
         [HttpGet("client/{clientId:int}")]
         public async Task<IActionResult> GetClientOrders(
-            int clientId)
+            int clientId,
+            CancellationToken cancellationToken)
         {
             var orders =
                 await _orderService.GetOrdersByClient(
-                    clientId);
+                    clientId,
+                    cancellationToken);
 
             return Ok(orders);
         }
 
-
-        // ============================================
+        // =====================================================
         // UPDATE STATUS
         // PUT: api/orders/5/status
-        // ============================================
+        // =====================================================
 
         [HttpPut("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(
             int id,
-            [FromBody] string status)
+            [FromBody] string status,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var result =
                     await _orderService.UpdateOrderStatus(
                         id,
-                        status);
+                        status,
+                        cancellationToken);
 
                 if (!result)
                 {
@@ -161,20 +159,22 @@ namespace PharmacyAPI.Controllers
             }
         }
 
-
-        // ============================================
+        // =====================================================
         // CANCEL ORDER
         // PUT: api/orders/5/cancel
-        // ============================================
+        // =====================================================
 
         [HttpPut("{id:int}/cancel")]
         public async Task<IActionResult> CancelOrder(
-            int id)
+            int id,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var result =
-                    await _orderService.CancelOrder(id);
+                    await _orderService.CancelOrder(
+                        id,
+                        cancellationToken);
 
                 if (!result)
                 {

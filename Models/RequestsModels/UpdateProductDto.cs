@@ -2,9 +2,12 @@
 {
     public class UpdateProductDto
     {
-        public string Name { get; set; } = string.Empty;
+        public string NameEn { get; set; } = string.Empty;
 
-        public string? Description { get; set; }
+        public string? DescriptionEn { get; set; }
+        public string NameAr { get; set; } = string.Empty;
+
+        public string? DescriptionAr { get; set; }
 
         public decimal Price { get; set; }
 

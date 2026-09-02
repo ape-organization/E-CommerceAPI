@@ -7,258 +7,598 @@ namespace PharmacyAPI.Services
 {
     public interface ISubCategoryService
     {
-        Task<IEnumerable<SubCategoryDto>> GetAllAsync();
+        Task<List<SubCategoryDto>> GetAllAsync(
+            CancellationToken cancellationToken = default);
 
-        Task<SubCategoryDto?> GetByIdAsync(int id);
+        Task<SubCategoryDto?> GetByIdAsync(
+            int id,
+            CancellationToken cancellationToken = default);
 
-        Task<IEnumerable<SubCategoryDto>> GetByCategoryIdAsync(int categoryId);
+        Task<List<SubCategoryDto>> GetByCategoryIdAsync(
+            int categoryId,
+            CancellationToken cancellationToken = default);
 
-        Task<SubCategoryDto> CreateAsync(CrudSubCategoryDto dto);
+        Task<SubCategoryDto> CreateAsync(
+            CrudSubCategoryDto dto,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> UpdateAsync(int id, CrudSubCategoryDto dto);
+        Task<bool> UpdateAsync(
+            int id,
+            CrudSubCategoryDto dto,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> DeleteAsync(int id);
+        Task<bool> DeleteAsync(
+            int id,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> AddProductAsync(int subCategoryId, int productId);
+        Task<bool> AddProductAsync(
+            int subCategoryId,
+            int productId,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> RemoveProductAsync(int subCategoryId, int productId);
+        Task<bool> RemoveProductAsync(
+            int subCategoryId,
+            int productId,
+            CancellationToken cancellationToken = default);
 
         Task<bool> SetProductsAsync(
             int subCategoryId,
-            List<int> productIds);
+            List<int> productIds,
+            CancellationToken cancellationToken = default);
     }
-    public class SubCategoryService    : ISubCategoryService
+
+
+    public class SubCategoryService : ISubCategoryService
     {
         private readonly PharmacyDbContext _context;
 
-        public SubCategoryService(PharmacyDbContext context)
+
+        public SubCategoryService(
+            PharmacyDbContext context)
         {
             _context = context;
         }
 
-        public async Task<IEnumerable<SubCategoryDto>> GetAllAsync()
+
+        // =====================================================
+        // GET ALL
+        // =====================================================
+
+        public async Task<List<SubCategoryDto>> GetAllAsync(
+            CancellationToken cancellationToken = default)
         {
             return await _context.SubCategories
                 .AsNoTracking()
-                .Include(sc => sc.Category)
-                .Include(sc => sc.Products)
+                .Where(sc =>
+                    !sc.IsDeleted &&
+                    !sc.Category.IsDeleted)
+                .OrderBy(sc => sc.NameEn)
                 .Select(sc => new SubCategoryDto
                 {
                     Id = sc.Id,
-                    Name = sc.Name,
+
+                    NameAr = sc.NameAr,
+                    NameEn = sc.NameEn,
+
                     CategoryId = sc.CategoryId,
-                    CategoryName = sc.Category.Name,
+
+                    CategoryNameEn = sc.Category.NameEn,
+                    CategoryNameAr = sc.Category.NameAr,
+
                     ProductIds = sc.Products
+                        .Where(p => !p.IsDeleted)
                         .Select(p => p.Id)
                         .ToList()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<SubCategoryDto?> GetByIdAsync(int id)
+
+        // =====================================================
+        // GET BY ID
+        // =====================================================
+
+        public async Task<SubCategoryDto?> GetByIdAsync(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             return await _context.SubCategories
                 .AsNoTracking()
-                .Include(sc => sc.Category)
-                .Include(sc => sc.Products)
-                .Where(sc => sc.Id == id)
+                .Where(sc =>
+                    sc.Id == id &&
+                    !sc.IsDeleted &&
+                    !sc.Category.IsDeleted)
                 .Select(sc => new SubCategoryDto
                 {
                     Id = sc.Id,
-                    Name = sc.Name,
+
+                    NameAr = sc.NameAr,
+                    NameEn = sc.NameEn,
+
                     CategoryId = sc.CategoryId,
-                    CategoryName = sc.Category.Name,
+
+                    CategoryNameAr = sc.Category.NameAr,
+                    CategoryNameEn = sc.Category.NameEn,
+
                     ProductIds = sc.Products
+                        .Where(p => !p.IsDeleted)
                         .Select(p => p.Id)
                         .ToList()
                 })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<SubCategoryDto>> GetByCategoryIdAsync(
-            int categoryId)
+
+        // =====================================================
+        // GET BY CATEGORY
+        // =====================================================
+
+        public async Task<List<SubCategoryDto>> GetByCategoryIdAsync(
+            int categoryId,
+            CancellationToken cancellationToken = default)
         {
             return await _context.SubCategories
                 .AsNoTracking()
-                .Include(sc => sc.Category)
-                .Include(sc => sc.Products)
-                .Where(sc => sc.CategoryId == categoryId)
+                .Where(sc =>
+                    sc.CategoryId == categoryId &&
+                    !sc.IsDeleted &&
+                    !sc.Category.IsDeleted)
+                .OrderBy(sc => sc.NameEn)
                 .Select(sc => new SubCategoryDto
                 {
                     Id = sc.Id,
-                    Name = sc.Name,
+
+                    NameAr = sc.NameAr,
+                    NameEn = sc.NameEn,
+
                     CategoryId = sc.CategoryId,
-                    CategoryName = sc.Category.Name,
+
+                    CategoryNameAr = sc.Category.NameAr,
+                    CategoryNameEn = sc.Category.NameEn,
+
                     ProductIds = sc.Products
+                        .Where(p => !p.IsDeleted)
                         .Select(p => p.Id)
                         .ToList()
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
+
+
+        // =====================================================
+        // CREATE
+        // =====================================================
 
         public async Task<SubCategoryDto> CreateAsync(
-            CrudSubCategoryDto dto)
+            CrudSubCategoryDto dto,
+            CancellationToken cancellationToken = default)
         {
-            var categoryExists = await _context.Categories
-                .AnyAsync(c => c.Id == dto.CategoryId);
+            ArgumentNullException.ThrowIfNull(dto);
 
-            if (!categoryExists)
+            var nameEn = dto.NameEn?.Trim() ?? string.Empty;
+            var nameAr = dto.NameAr?.Trim() ?? string.Empty;
+
+
+            // -------------------------------------------------
+            // GET CATEGORY
+            // -------------------------------------------------
+
+            var category = await _context.Categories
+                .AsNoTracking()
+                .Where(c =>
+                    c.Id == dto.CategoryId &&
+                    !c.IsDeleted)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.NameEn,
+                    c.NameAr
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+
+            if (category is null)
+            {
                 throw new KeyNotFoundException(
                     "Category not found.");
+            }
+
+
+            // -------------------------------------------------
+            // CHECK DUPLICATE
+            // -------------------------------------------------
 
             var nameExists = await _context.SubCategories
-                .AnyAsync(sc =>
-                    sc.CategoryId == dto.CategoryId &&
-                    sc.Name.ToLower() == dto.Name.ToLower());
+                .AsNoTracking()
+                .AnyAsync(
+                    sc =>
+                        sc.CategoryId == dto.CategoryId &&
+                        !sc.IsDeleted &&
+                        sc.NameEn == nameEn &&
+                        sc.NameAr == nameAr,
+                    cancellationToken);
+
 
             if (nameExists)
+            {
                 throw new InvalidOperationException(
                     "A subcategory with this name already exists in this category.");
+            }
+
+
+            // -------------------------------------------------
+            // CREATE
+            // -------------------------------------------------
 
             var subCategory = new SubCategory
             {
-                Name = dto.Name.Trim(),
-                CategoryId = dto.CategoryId
+                NameAr = nameAr,
+                NameEn = nameEn,
+                CategoryId = dto.CategoryId,
+                IsDeleted = false
             };
+
 
             _context.SubCategories.Add(subCategory);
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(
+                cancellationToken);
 
-            return (await GetByIdAsync(subCategory.Id))!;
+
+            return new SubCategoryDto
+            {
+                Id = subCategory.Id,
+
+                NameAr = subCategory.NameAr,
+                NameEn = subCategory.NameEn,
+
+                CategoryId = category.Id,
+
+                CategoryNameAr = category.NameAr,
+                CategoryNameEn = category.NameEn,
+
+                ProductIds = new List<int>()
+            };
         }
+        // =====================================================
+        // UPDATE
+        // =====================================================
 
         public async Task<bool> UpdateAsync(
             int id,
-            CrudSubCategoryDto dto)
+            CrudSubCategoryDto dto,
+            CancellationToken cancellationToken = default)
         {
-            var subCategory = await _context.SubCategories
-                .FirstOrDefaultAsync(sc => sc.Id == id);
+            ArgumentNullException.ThrowIfNull(dto);
 
-            if (subCategory == null)
+
+            var subCategory = await _context.SubCategories
+                .FirstOrDefaultAsync(
+                    sc =>
+                        sc.Id == id &&
+                        !sc.IsDeleted,
+                    cancellationToken);
+
+
+            if (subCategory is null)
+            {
                 return false;
+            }
+
+
+            var nameEn = dto.NameEn?.Trim() ?? string.Empty;
+            var nameAr = dto.NameAr?.Trim() ?? string.Empty;
+
+
+            // -------------------------------------------------
+            // CHECK CATEGORY
+            // -------------------------------------------------
 
             var categoryExists = await _context.Categories
-                .AnyAsync(c => c.Id == dto.CategoryId);
+                .AsNoTracking()
+                .AnyAsync(
+                    c =>
+                        c.Id == dto.CategoryId &&
+                        !c.IsDeleted,
+                    cancellationToken);
+
 
             if (!categoryExists)
+            {
                 throw new KeyNotFoundException(
                     "Category not found.");
+            }
+
+
+            // -------------------------------------------------
+            // CHECK DUPLICATE
+            // -------------------------------------------------
 
             var nameExists = await _context.SubCategories
-                .AnyAsync(sc =>
-                    sc.Id != id &&
-                    sc.CategoryId == dto.CategoryId &&
-                    sc.Name.ToLower() == dto.Name.ToLower());
+                .AsNoTracking()
+                .AnyAsync(
+                    sc =>
+                        sc.Id != id &&
+                        sc.CategoryId == dto.CategoryId &&
+                        !sc.IsDeleted &&
+                        sc.NameEn == nameEn &&
+                        sc.NameAr == nameAr,
+                    cancellationToken);
+
 
             if (nameExists)
+            {
                 throw new InvalidOperationException(
                     "A subcategory with this name already exists in this category.");
+            }
 
-            subCategory.Name = dto.Name.Trim();
+
+            // -------------------------------------------------
+            // UPDATE
+            // -------------------------------------------------
+
+            subCategory.NameAr = nameAr;
+            subCategory.NameEn = nameEn;
             subCategory.CategoryId = dto.CategoryId;
 
-            await _context.SaveChangesAsync();
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
 
             return true;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+
+        // =====================================================
+        // DELETE
+        // =====================================================
+
+        public async Task<bool> DeleteAsync(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             var subCategory = await _context.SubCategories
-                .FirstOrDefaultAsync(sc => sc.Id == id);
+                .FirstOrDefaultAsync(
+                    sc =>
+                        sc.Id == id &&
+                        !sc.IsDeleted,
+                    cancellationToken);
 
-            if (subCategory == null)
+
+            if (subCategory is null)
+            {
                 return false;
+            }
+
 
             subCategory.IsDeleted = true;
 
-            await _context.SaveChangesAsync();
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
 
             return true;
         }
+
+
+        // =====================================================
+        // ADD PRODUCT
+        // =====================================================
+
         public async Task<bool> AddProductAsync(
             int subCategoryId,
-            int productId)
+            int productId,
+            CancellationToken cancellationToken = default)
         {
-            var subCategory = await _context.SubCategories
-                .Include(sc => sc.Products)
-                .FirstOrDefaultAsync(sc => sc.Id == subCategoryId);
+            // -------------------------------------------------
+            // CHECK SUBCATEGORY
+            // -------------------------------------------------
 
-            if (subCategory == null)
+            var subCategoryExists =
+                await _context.SubCategories
+                    .AsNoTracking()
+                    .AnyAsync(
+                        sc =>
+                            sc.Id == subCategoryId &&
+                            !sc.IsDeleted,
+                        cancellationToken);
+
+
+            if (!subCategoryExists)
+            {
                 return false;
+            }
 
-            var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == productId);
 
-            if (product == null)
+            // -------------------------------------------------
+            // CHECK PRODUCT
+            // -------------------------------------------------
+
+            var productExists =
+                await _context.Products
+                    .AsNoTracking()
+                    .AnyAsync(
+                        p =>
+                            p.Id == productId &&
+                            !p.IsDeleted,
+                        cancellationToken);
+
+
+            if (!productExists)
+            {
                 throw new KeyNotFoundException(
                     "Product not found.");
+            }
 
-            if (subCategory.Products.Any(p => p.Id == productId))
+
+            // -------------------------------------------------
+            // CHECK RELATIONSHIP
+            // -------------------------------------------------
+
+            var relationshipExists =
+                await _context.SubCategories
+                    .Where(sc => sc.Id == subCategoryId)
+                    .SelectMany(sc => sc.Products)
+                    .AnyAsync(
+                        p => p.Id == productId,
+                        cancellationToken);
+
+
+            if (relationshipExists)
+            {
                 return true;
+            }
+
+
+            // -------------------------------------------------
+            // LOAD ONLY THE REQUIRED ENTITIES
+            // -------------------------------------------------
+
+            var subCategory = await _context.SubCategories
+                .FirstAsync(
+                    sc => sc.Id == subCategoryId,
+                    cancellationToken);
+
+
+            var product = await _context.Products
+                .FirstAsync(
+                    p => p.Id == productId,
+                    cancellationToken);
+
 
             subCategory.Products.Add(product);
 
-            await _context.SaveChangesAsync();
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
 
             return true;
         }
+
+
+        // =====================================================
+        // REMOVE PRODUCT
+        // =====================================================
 
         public async Task<bool> RemoveProductAsync(
             int subCategoryId,
-            int productId)
+            int productId,
+            CancellationToken cancellationToken = default)
         {
             var subCategory = await _context.SubCategories
                 .Include(sc => sc.Products)
-                .FirstOrDefaultAsync(sc => sc.Id == subCategoryId);
+                .FirstOrDefaultAsync(
+                    sc =>
+                        sc.Id == subCategoryId &&
+                        !sc.IsDeleted,
+                    cancellationToken);
 
-            if (subCategory == null)
+
+            if (subCategory is null)
+            {
                 return false;
+            }
+
 
             var product = subCategory.Products
-                .FirstOrDefault(p => p.Id == productId);
+                .FirstOrDefault(
+                    p =>
+                        p.Id == productId &&
+                        !p.IsDeleted);
 
-            if (product == null)
+
+            if (product is null)
+            {
                 return false;
+            }
+
 
             subCategory.Products.Remove(product);
 
-            await _context.SaveChangesAsync();
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
 
             return true;
         }
 
+
+        // =====================================================
+        // SET PRODUCTS
+        // =====================================================
+
         public async Task<bool> SetProductsAsync(
             int subCategoryId,
-            List<int> productIds)
+            List<int> productIds,
+            CancellationToken cancellationToken = default)
         {
+            productIds ??= new List<int>();
+
+
+            var distinctProductIds = productIds
+                .Distinct()
+                .ToList();
+
+
+            // -------------------------------------------------
+            // CHECK SUBCATEGORY
+            // -------------------------------------------------
+
             var subCategory = await _context.SubCategories
                 .Include(sc => sc.Products)
-                .FirstOrDefaultAsync(sc => sc.Id == subCategoryId);
+                .FirstOrDefaultAsync(
+                    sc =>
+                        sc.Id == subCategoryId &&
+                        !sc.IsDeleted,
+                    cancellationToken);
 
-            if (subCategory == null)
+
+            if (subCategory is null)
+            {
                 return false;
+            }
+
+
+            // -------------------------------------------------
+            // GET PRODUCTS
+            // -------------------------------------------------
 
             var products = await _context.Products
-                .Where(p => productIds.Contains(p.Id))
-                .ToListAsync();
+                .Where(p =>
+                    distinctProductIds.Contains(p.Id) &&
+                    !p.IsDeleted)
+                .ToListAsync(cancellationToken);
 
-            if (products.Count != productIds.Distinct().Count())
+
+            if (products.Count != distinctProductIds.Count)
+            {
                 throw new KeyNotFoundException(
                     "One or more products were not found.");
+            }
+
+
+            // -------------------------------------------------
+            // UPDATE RELATIONSHIPS
+            // -------------------------------------------------
 
             subCategory.Products.Clear();
+
 
             foreach (var product in products)
             {
                 subCategory.Products.Add(product);
             }
 
-            await _context.SaveChangesAsync();
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
 
             return true;
         }
     }
 }
-

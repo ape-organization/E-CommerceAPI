@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PharmacyAPI.Data;
-using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Models.Responses;
 using PharmacyAPI.Services;
@@ -14,26 +11,54 @@ namespace PharmacyAPI.Controllers
     [Authorize]
     public class ProductsController : ControllerBase
     {
-        private readonly PharmacyDbContext _context;
         private readonly IProductService _productService;
 
         public ProductsController(
-            IProductService product,
-            PharmacyDbContext context)
+            IProductService productService)
         {
-            _productService = product;
-            _context = context;
+            _productService = productService;
         }
-        //=============================
-        // check products ids exists 
-        //==============================
+
+
+        // =====================================================
+        // GET PRODUCTS
+        // GET: api/products
+        // =====================================================
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<ActionResult<PagedResponse<ProductResponseDto>>> GetProducts(
+            [FromQuery] int page = 1,
+            [FromQuery] int? categoryId = null,
+            [FromQuery] int? subCategoryId = null,
+            [FromQuery] int? brandId = null,
+            [FromQuery] bool? offers = null,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _productService.GetProducts(
+                page,
+                categoryId,
+                subCategoryId,
+                brandId,
+                offers,
+                cancellationToken);
+
+            return Ok(result);
+        }
+
+
+        // =====================================================
+        // GET CART PRODUCTS
+        // POST: api/products/cart
+        // =====================================================
+
         [HttpPost("cart")]
         [AllowAnonymous]
         public async Task<IActionResult> GetCartProducts(
-    [FromBody] GetProductsByIdsRequest request)
+            [FromBody] GetProductsByIdsRequest request,
+            CancellationToken cancellationToken)
         {
-            if (request == null ||
-                request.ProductIds == null ||
+            if (request?.ProductIds is null ||
                 request.ProductIds.Count == 0)
             {
                 return Ok(new List<ProductResponseDto>());
@@ -41,194 +66,26 @@ namespace PharmacyAPI.Controllers
 
             var products =
                 await _productService.GetProductsByIds(
-                    request.ProductIds
-                );
+                    request.ProductIds,
+                    cancellationToken);
 
             return Ok(products);
         }
 
+
         // =====================================================
-        // GET ALL PRODUCTS
-        // GET: api/products
-        // =====================================================
-
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<PagedResponse<ProductResponseDto>> GetProducts(
-    int page = 1,
-    int? categoryId = null,
-    int? subCategoryId = null,
-    int? brandId = null,
-    bool? offers = null)
-        {
-            try
-            {
-                const int pageSize = 100;
-
-                if (page < 1)
-                    page = 1;
-
-                var query = _context.Products
-                    .AsNoTracking()
-                    .Where(p => !p.IsDeleted);
-
-                // =========================
-                // FILTERS
-                // =========================
-
-                if (categoryId.HasValue)
-                {
-                    query = query.Where(p =>
-                        p.SubCategories.Any(sc =>
-                            !sc.IsDeleted &&
-                            sc.CategoryId == categoryId.Value));
-                }
-
-                if (subCategoryId.HasValue)
-                {
-                    query = query.Where(p =>
-                        p.SubCategories.Any(sc =>
-                            !sc.IsDeleted &&
-                            sc.Id == subCategoryId.Value));
-                }
-
-                if (brandId.HasValue)
-                {
-                    query = query.Where(p =>
-                        p.BrandId == brandId.Value);
-                }
-
-                if (offers == true)
-                {
-                    query = query.Where(p =>
-                        p.DiscountPercentage > 0);
-                }
-
-                // =========================
-                // ARE WE FILTERING?
-                // =========================
-
-                bool hasFilters =
-                    categoryId.HasValue ||
-                    subCategoryId.HasValue ||
-                    brandId.HasValue ||
-                    offers == true;
-
-                // =========================
-                // TOTAL
-                // =========================
-
-                var totalCount = await query.CountAsync();
-
-                // =========================
-                // PAGINATION
-                //
-                // NO FILTER = 100
-                // FILTER = ALL
-                // =========================
-
-                int totalPages;
-
-                if (hasFilters)
-                {
-                    totalPages = totalCount > 0 ? 1 : 0;
-                }
-                else
-                {
-                    totalPages =
-                        (int)Math.Ceiling(
-                            totalCount / (double)pageSize);
-
-                    query = query
-                        .OrderBy(p => p.Id)
-                        .Skip((page - 1) * pageSize)
-                        .Take(pageSize);
-                }
-
-                var products = await query
-                    .OrderBy(p => p.Id)
-                    .Select(p => new ProductResponseDto
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Description = p.Description,
-                        Price = p.Price,
-                        DiscountPercentage = p.DiscountPercentage,
-                        StockQuantity = p.StockQuantity,
-                        IsInStock = p.IsInStock,
-                        ImageUrl = p.ImageUrl,
-
-                        BrandId = p.BrandId,
-
-                        Brand = p.Brand == null
-                            ? null
-                            : new BrandResponseDto
-                            {
-                                Id = p.Brand.Id,
-                                Name = p.Brand.Name,
-                                ImageUrl = p.Brand.ImageUrl
-                            },
-
-                        CategoryId = p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => (int?)sc.CategoryId)
-                            .FirstOrDefault(),
-
-                        SubCategories = p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => new SubCategoryResponseDto
-                            {
-                                Id = sc.Id,
-                                Name = sc.Name,
-                                CategoryId = sc.CategoryId,
-                                CategoryName = sc.Category.Name
-                            })
-                            .ToList()
-                    })
-                    .ToListAsync();
-
-                return new PagedResponse<ProductResponseDto>
-                {
-                    Items = products,
-
-                    Page = hasFilters ? 1 : page,
-
-                    PageSize = hasFilters
-                        ? products.Count
-                        : pageSize,
-
-                    TotalCount = totalCount,
-
-                    TotalPages = totalPages,
-
-                    HasMore =
-                        !hasFilters &&
-                        page < totalPages
-                };
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-
-             
-
-                throw;
-            }
-        }
-
-      
-        
-        // =====================================================
-        // GET ALL DISCOUNTED PRODUCTS
+        // GET DISCOUNTED PRODUCTS
         // GET: api/products/discounted
         // =====================================================
 
         [HttpGet("discounted")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetDiscountedProducts()
+        public async Task<ActionResult<List<ProductResponseDto>>> GetDiscountedProducts(
+            CancellationToken cancellationToken)
         {
             var products =
-                await _productService.GetDiscountedProducts();
+                await _productService.GetDiscountedProducts(
+                    cancellationToken);
 
             return Ok(products);
         }
@@ -241,12 +98,16 @@ namespace PharmacyAPI.Controllers
 
         [HttpGet("{id:int}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetProduct(int id)
+        public async Task<IActionResult> GetProduct(
+            int id,
+            CancellationToken cancellationToken)
         {
             var product =
-                await _productService.GetProduct(id);
+                await _productService.GetProduct(
+                    id,
+                    cancellationToken);
 
-            if (product == null)
+            if (product is null)
             {
                 return NotFound(new
                 {
@@ -261,26 +122,24 @@ namespace PharmacyAPI.Controllers
         // =====================================================
         // CREATE PRODUCT
         // POST: api/products
-        // Content-Type: multipart/form-data
         // =====================================================
 
         [HttpPost]
-        [Authorize]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreateProduct(
-            [FromForm] ProductDto dto)
+            [FromForm] ProductDto dto,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var product =
-                    await _productService.CreateProduct(dto);
+                    await _productService.CreateProduct(
+                        dto,
+                        cancellationToken);
 
                 return CreatedAtAction(
                     nameof(GetProduct),
-                    new
-                    {
-                        id = product.Id
-                    },
+                    new { id = product.Id },
                     product);
             }
             catch (InvalidOperationException ex)
@@ -303,22 +162,22 @@ namespace PharmacyAPI.Controllers
         // =====================================================
         // UPDATE PRODUCT
         // PUT: api/products/5
-        // Content-Type: multipart/form-data
         // =====================================================
 
         [HttpPut("{id:int}")]
-        [Authorize]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateProduct(
             int id,
-            [FromForm] UpdateProductDto dto)
+            [FromForm] UpdateProductDto dto,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var updated =
                     await _productService.UpdateProduct(
                         id,
-                        dto);
+                        dto,
+                        cancellationToken);
 
                 if (!updated)
                 {
@@ -328,10 +187,9 @@ namespace PharmacyAPI.Controllers
                     });
                 }
 
-                var product =
-                    await _productService.GetProduct(id);
-
-                return Ok(product);
+                // Return 204.
+                // No second SELECT is required.
+                return NoContent();
             }
             catch (InvalidOperationException ex)
             {
@@ -356,34 +214,24 @@ namespace PharmacyAPI.Controllers
         // =====================================================
 
         [HttpPut("{id:int}/remove-discount")]
-        [Authorize]
-        public async Task<IActionResult> RemoveDiscount(int id)
+        public async Task<IActionResult> RemoveDiscount(
+            int id,
+            CancellationToken cancellationToken)
         {
-            try
-            {
-                var result =
-                    await _productService.RemoveDiscount(id);
+            var product =
+                await _productService.RemoveDiscount(
+                    id,
+                    cancellationToken);
 
-                if (!result)
-                {
-                    return NotFound(new
-                    {
-                        message = "Product not found."
-                    });
-                }
-
-                var product =
-                    await _productService.GetProduct(id);
-
-                return Ok(product);
-            }
-            catch (KeyNotFoundException ex)
+            if (product is null)
             {
                 return NotFound(new
                 {
-                    message = ex.Message
+                    message = "Product not found."
                 });
             }
+
+            return Ok(product);
         }
 
 
@@ -393,11 +241,14 @@ namespace PharmacyAPI.Controllers
         // =====================================================
 
         [HttpDelete("{id:int}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(
+            int id,
+            CancellationToken cancellationToken)
         {
             var deleted =
-                await _productService.DeleteProduct(id);
+                await _productService.DeleteProduct(
+                    id,
+                    cancellationToken);
 
             if (!deleted)
             {
@@ -407,30 +258,37 @@ namespace PharmacyAPI.Controllers
                 });
             }
 
-            return Ok(new
-            {
-                message = "Product deleted successfully."
-            });
+            return NoContent();
         }
+
+
+        // =====================================================
+        // SEARCH PRODUCTS BY NAME
+        // GET: api/products/by-name?name=Panadol
+        // =====================================================
+
         [HttpGet("by-name")]
-        public async Task<ActionResult<ProductResponseDto>> GetProductByName(
-    [FromQuery] string name)
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProductsByName(
+            [FromQuery] string name,
+            CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return BadRequest("Product name is required.");
+                return BadRequest(new
+                {
+                    message = "Product name is required."
+                });
             }
 
-            var product =
-                await _productService.GetProductsByName(name);
+            var products =
+                await _productService.GetProductsByName(
+                    name,
+                    cancellationToken);
 
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(product);
+            return Ok(products);
         }
+
 
         // =====================================================
         // CHECK PRODUCT NAME
@@ -439,7 +297,8 @@ namespace PharmacyAPI.Controllers
 
         [HttpGet("check-name")]
         public async Task<IActionResult> CheckProductExists(
-            [FromQuery] string name)
+            [FromQuery] string name,
+            CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -450,7 +309,9 @@ namespace PharmacyAPI.Controllers
             }
 
             var exists =
-                await _productService.CheckProductExists(name);
+                await _productService.CheckProductExists(
+                    name,
+                    cancellationToken);
 
             return Ok(new
             {

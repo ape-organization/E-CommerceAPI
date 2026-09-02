@@ -8,9 +8,10 @@ namespace PharmacyAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class SubCategoryController : Controller
+    public class SubCategoryController : ControllerBase
     {
         private readonly ISubCategoryService _service;
+
 
         public SubCategoryController(
             ISubCategoryService service)
@@ -18,54 +19,111 @@ namespace PharmacyAPI.Controllers
             _service = service;
         }
 
-        // GET: api/SubCategories
+
+        // =====================================================
+        // GET ALL
+        // =====================================================
+
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+            CancellationToken cancellationToken)
         {
-            var result = await _service.GetAllAsync();
+            var result = await _service
+                .GetAllAsync(cancellationToken);
 
             return Ok(result);
         }
 
-        // GET: api/SubCategories/5
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var result = await _service.GetByIdAsync(id);
 
-            if (result == null)
+        // =====================================================
+        // GET BY ID
+        // =====================================================
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            var result = await _service
+                .GetByIdAsync(
+                    id,
+                    cancellationToken);
+
+
+            if (result is null)
+            {
                 return NotFound(new
                 {
                     message = "Subcategory not found."
                 });
+            }
+
 
             return Ok(result);
         }
 
-        // GET: api/SubCategories/category/2
+
+        // =====================================================
+        // GET BY CATEGORY
+        // =====================================================
+
         [HttpGet("category/{categoryId:int}")]
         public async Task<IActionResult> GetByCategory(
-            int categoryId)
+            int categoryId,
+            CancellationToken cancellationToken)
         {
-            var result =
-                await _service.GetByCategoryIdAsync(categoryId);
+            var result = await _service
+                .GetByCategoryIdAsync(
+                    categoryId,
+                    cancellationToken);
 
             return Ok(result);
         }
 
-        // POST: api/SubCategories
+
+        // =====================================================
+        // CREATE
+        // =====================================================
+
         [HttpPost]
         public async Task<IActionResult> Create(
-            [FromBody] CrudSubCategoryDto dto)
+            [FromBody] CrudSubCategoryDto dto,
+            CancellationToken cancellationToken)
         {
+            if (dto is null)
+            {
+                return BadRequest(new
+                {
+                    message = "Subcategory data is required."
+                });
+            }
+
+
+            if (string.IsNullOrWhiteSpace(dto.NameEn) &&
+                string.IsNullOrWhiteSpace(dto.NameAr))
+            {
+                return BadRequest(new
+                {
+                    message = "Subcategory name is required."
+                });
+            }
+
+
             try
             {
-                var result = await _service.CreateAsync(dto);
+                var result = await _service
+                    .CreateAsync(
+                        dto,
+                        cancellationToken);
+
 
                 return CreatedAtAction(
                     nameof(GetById),
-                    new { id = result.Id },
+                    new
+                    {
+                        id = result.Id
+                    },
                     result);
             }
             catch (KeyNotFoundException ex)
@@ -84,27 +142,55 @@ namespace PharmacyAPI.Controllers
             }
         }
 
-        // PUT: api/SubCategories/5
+
+        // =====================================================
+        // UPDATE
+        // =====================================================
+
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(
             int id,
-            [FromBody] CrudSubCategoryDto dto)
+            [FromBody] CrudSubCategoryDto dto,
+            CancellationToken cancellationToken)
         {
+            if (dto is null)
+            {
+                return BadRequest(new
+                {
+                    message = "Subcategory data is required."
+                });
+            }
+
+
+            if (string.IsNullOrWhiteSpace(dto.NameEn) &&
+                string.IsNullOrWhiteSpace(dto.NameAr))
+            {
+                return BadRequest(new
+                {
+                    message = "Subcategory name is required."
+                });
+            }
+
+
             try
             {
-                var result =
-                    await _service.UpdateAsync(id, dto);
+                var result = await _service
+                    .UpdateAsync(
+                        id,
+                        dto,
+                        cancellationToken);
+
 
                 if (!result)
+                {
                     return NotFound(new
                     {
                         message = "Subcategory not found."
                     });
+                }
 
-                return Ok(new
-                {
-                    message = "Subcategory updated successfully."
-                });
+
+                return NoContent();
             }
             catch (KeyNotFoundException ex)
             {
@@ -122,41 +208,62 @@ namespace PharmacyAPI.Controllers
             }
         }
 
-        // DELETE: api/SubCategories/5
+
+        // =====================================================
+        // DELETE
+        // =====================================================
+
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(
+            int id,
+            CancellationToken cancellationToken)
         {
-            var result = await _service.DeleteAsync(id);
+            var result = await _service
+                .DeleteAsync(
+                    id,
+                    cancellationToken);
+
 
             if (!result)
+            {
                 return NotFound(new
                 {
                     message = "Subcategory not found."
                 });
+            }
 
-            return Ok(new
-            {
-                message = "Subcategory deleted successfully."
-            });
+
+            return NoContent();
         }
 
-        // POST: api/SubCategories/5/products/10
+
+        // =====================================================
+        // ADD PRODUCT
+        // =====================================================
+
         [HttpPost("{subCategoryId:int}/products/{productId:int}")]
         public async Task<IActionResult> AddProduct(
             int subCategoryId,
-            int productId)
+            int productId,
+            CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _service.AddProductAsync(
-                    subCategoryId,
-                    productId);
+                var result = await _service
+                    .AddProductAsync(
+                        subCategoryId,
+                        productId,
+                        cancellationToken);
+
 
                 if (!result)
+                {
                     return NotFound(new
                     {
                         message = "Subcategory not found."
                     });
+                }
+
 
                 return Ok(new
                 {
@@ -172,50 +279,67 @@ namespace PharmacyAPI.Controllers
             }
         }
 
-        // DELETE: api/SubCategories/5/products/10
+
+        // =====================================================
+        // REMOVE PRODUCT
+        // =====================================================
+
         [HttpDelete("{subCategoryId:int}/products/{productId:int}")]
         public async Task<IActionResult> RemoveProduct(
             int subCategoryId,
-            int productId)
+            int productId,
+            CancellationToken cancellationToken)
         {
-            var result = await _service.RemoveProductAsync(
-                subCategoryId,
-                productId);
+            var result = await _service
+                .RemoveProductAsync(
+                    subCategoryId,
+                    productId,
+                    cancellationToken);
+
 
             if (!result)
+            {
                 return NotFound(new
                 {
-                    message = "Subcategory or product relationship not found."
+                    message =
+                        "Subcategory or product relationship not found."
                 });
+            }
 
-            return Ok(new
-            {
-                message = "Product removed from subcategory."
-            });
+
+            return NoContent();
         }
 
-        // PUT: api/SubCategories/5/products
+
+        // =====================================================
+        // SET PRODUCTS
+        // =====================================================
+
         [HttpPut("{subCategoryId:int}/products")]
         public async Task<IActionResult> SetProducts(
             int subCategoryId,
-            [FromBody] List<int> productIds)
+            [FromBody] List<int> productIds,
+            CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _service.SetProductsAsync(
-                    subCategoryId,
-                    productIds);
+                var result = await _service
+                    .SetProductsAsync(
+                        subCategoryId,
+                        productIds,
+                        cancellationToken);
+
 
                 if (!result)
+                {
                     return NotFound(new
                     {
                         message = "Subcategory not found."
                     });
+                }
 
-                return Ok(new
-                {
-                    message = "Subcategory products updated successfully."
-                });
+
+                return NoContent();
             }
             catch (KeyNotFoundException ex)
             {

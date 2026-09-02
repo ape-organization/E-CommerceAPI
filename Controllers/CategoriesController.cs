@@ -11,14 +11,13 @@ namespace PharmacyAPI.Controllers
     [Authorize]
     public class CategoriesController : ControllerBase
     {
-        private readonly ICategoryService categoryService;
+        private readonly ICategoryService _categoryService;
 
 
         public CategoriesController(
-            ICategoryService category
-        )
+            ICategoryService categoryService)
         {
-            categoryService = category;
+            _categoryService = categoryService;
         }
 
 
@@ -29,11 +28,11 @@ namespace PharmacyAPI.Controllers
         [HttpGet("menu")]
         [AllowAnonymous]
         public async Task<ActionResult<List<CategoryMenu>>>
-            GetCategoriesForMenu()
+            GetCategoriesForMenu(
+                CancellationToken cancellationToken)
         {
-            var categories =
-                await categoryService
-                    .GetCategoriesForMenu();
+            var categories = await _categoryService
+                .GetCategoriesForMenu(cancellationToken);
 
             return Ok(categories);
         }
@@ -45,14 +44,14 @@ namespace PharmacyAPI.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<Category>>>
-            GetCategories()
+        public async Task<ActionResult<List<Category>>>
+            GetCategories(
+                CancellationToken cancellationToken)
         {
-            var cats =
-                await categoryService
-                    .GetCategories();
+            var categories = await _categoryService
+                .GetCategories(cancellationToken);
 
-            return Ok(cats);
+            return Ok(categories);
         }
 
 
@@ -60,17 +59,19 @@ namespace PharmacyAPI.Controllers
         // GET BY ID
         // =====================================================
 
-        [HttpGet("{id}")]
-        [Authorize]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<Category>>
-            GetCategory(int id)
+            GetCategory(
+                int id,
+                CancellationToken cancellationToken)
         {
-            var category =
-                await categoryService
-                    .GetCategory(id);
+            var category = await _categoryService
+                .GetCategory(
+                    id,
+                    cancellationToken);
 
 
-            if (category == null)
+            if (category is null)
                 return NotFound();
 
 
@@ -83,34 +84,47 @@ namespace PharmacyAPI.Controllers
         // =====================================================
 
         [HttpPost]
-        [Authorize]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<Category>>
             CreateCategory(
-                [FromForm] CreateCategoryRequest dto
-            )
+                [FromForm] CreateCategoryRequest dto,
+                CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(dto.Name))
+            if (dto is null)
             {
                 return BadRequest(
-                    "Category name is required."
-                );
+                    "Category data is required.");
             }
 
 
-            var category =
-                await categoryService
-                    .CreateCategory(dto);
+            if (string.IsNullOrWhiteSpace(dto.NameEn) &&
+                string.IsNullOrWhiteSpace(dto.NameAr))
+            {
+                return BadRequest(
+                    "Category name is required.");
+            }
 
 
-            return CreatedAtAction(
-                nameof(GetCategory),
-                new
-                {
-                    id = category.Id
-                },
-                category
-            );
+            try
+            {
+                var category = await _categoryService
+                    .CreateCategory(
+                        dto,
+                        cancellationToken);
+
+
+                return CreatedAtAction(
+                    nameof(GetCategory),
+                    new
+                    {
+                        id = category.Id
+                    },
+                    category);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
 
@@ -118,34 +132,46 @@ namespace PharmacyAPI.Controllers
         // UPDATE
         // =====================================================
 
-        [HttpPut("{id}")]
-        [Authorize]
+        [HttpPut("{id:int}")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult>
             UpdateCategory(
                 int id,
-                [FromForm] CreateCategoryRequest dto
-            )
+                [FromForm] CreateCategoryRequest dto,
+                CancellationToken cancellationToken)
         {
+            if (dto is null)
+            {
+                return BadRequest(
+                    "Category data is required.");
+            }
+
+
+            if (string.IsNullOrWhiteSpace(dto.NameEn) &&
+                string.IsNullOrWhiteSpace(dto.NameAr))
+            {
+                return BadRequest(
+                    "Category name is required.");
+            }
+
+
             try
             {
-                await categoryService
+                await _categoryService
                     .UpdateCategory(
                         id,
-                        dto
-                    );
+                        dto,
+                        cancellationToken);
 
-
-                var category =
-                    await categoryService
-                        .GetCategory(id);
-
-
-                return Ok(category);
+                return NoContent();
             }
             catch (KeyNotFoundException)
             {
                 return NotFound();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
@@ -154,28 +180,25 @@ namespace PharmacyAPI.Controllers
         // DELETE
         // =====================================================
 
-        [HttpDelete("{id}")]
-        [Authorize]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult>
-            DeleteCategory(int id)
+            DeleteCategory(
+                int id,
+                CancellationToken cancellationToken)
         {
-            var category =
-                await categoryService
-                    .GetCategory(id);
+            try
+            {
+                await _categoryService
+                    .DeleteCategory(
+                        id,
+                        cancellationToken);
 
-
-            if (category == null)
+                return NoContent();
+            }
+            catch (KeyNotFoundException)
+            {
                 return NotFound();
-
-
-            await categoryService
-                .DeleteCategory(
-                    id,
-                    category
-                );
-
-
-            return NoContent();
+            }
         }
     }
 }

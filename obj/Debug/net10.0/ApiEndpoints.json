@@ -28,7 +28,12 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "Name",
+        "Name": "NameAr",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NameEn",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -90,7 +95,12 @@
         "IsRequired": true
       },
       {
-        "Name": "Name",
+        "Name": "NameAr",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NameEn",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -128,7 +138,7 @@
     "Parameters": [],
     "ReturnTypes": [
       {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[PharmacyAPI.Models.Category, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "Type": "System.Collections.Generic.List\u00601[[PharmacyAPI.Models.Category, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -147,7 +157,12 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "Name",
+        "Name": "NameAr",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NameEn",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -209,7 +224,12 @@
         "IsRequired": true
       },
       {
-        "Name": "Name",
+        "Name": "NameAr",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NameEn",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -428,12 +448,22 @@
         "IsRequired": false
       },
       {
-        "Name": "Name",
+        "Name": "NameAr",
         "Type": "System.String",
         "IsRequired": false
       },
       {
-        "Name": "Description",
+        "Name": "DescriptionAr",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NameEn",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "DescriptionEn",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -510,12 +540,22 @@
         "IsRequired": true
       },
       {
-        "Name": "Name",
+        "Name": "NameEn",
         "Type": "System.String",
         "IsRequired": false
       },
       {
-        "Name": "Description",
+        "Name": "DescriptionEn",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "NameAr",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "DescriptionAr",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -591,7 +631,7 @@
   },
   {
     "ContainingType": "PharmacyAPI.Controllers.ProductsController",
-    "Method": "GetProductByName",
+    "Method": "GetProductsByName",
     "RelativePath": "api/Products/by-name",
     "HttpMethod": "GET",
     "IsController": true,
@@ -603,17 +643,7 @@
         "IsRequired": false
       }
     ],
-    "ReturnTypes": [
-      {
-        "Type": "PharmacyAPI.Models.RequestsModels.ProductResponseDto",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
+    "ReturnTypes": []
   },
   {
     "ContainingType": "PharmacyAPI.Controllers.ProductsController",
@@ -655,7 +685,17 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
-    "ReturnTypes": []
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.List\u00601[[PharmacyAPI.Models.RequestsModels.ProductResponseDto, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   },
   {
     "ContainingType": "PharmacyAPI.Controllers.RolesController",
@@ -689,6 +729,73 @@
         "Name": "id",
         "Type": "System.Int32",
         "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.SliderController",
+    "Method": "GetSliders",
+    "RelativePath": "api/Slider",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.List\u00601[[PharmacyAPI.Models.Slider, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.SliderController",
+    "Method": "CreateCategory",
+    "RelativePath": "api/Slider",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Image",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "PharmacyAPI.Models.Slider",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.SliderController",
+    "Method": "UpdateSlider",
+    "RelativePath": "api/Slider/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "Image",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

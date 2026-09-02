@@ -27,10 +27,12 @@ namespace PharmacyAPI.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<List<Brand>>> GetBrands()
+        public async Task<ActionResult<List<Brand>>>
+            GetBrands(
+                CancellationToken cancellationToken)
         {
-            var brands =
-                await _brandService.GetBrands();
+            var brands = await _brandService
+                .GetBrands(cancellationToken);
 
             return Ok(brands);
         }
@@ -40,16 +42,19 @@ namespace PharmacyAPI.Controllers
         // GET BY ID
         // =====================================================
 
-        [HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<ActionResult<Brand>> GetBrand(
-            int id)
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<Brand>>
+            GetBrand(
+                int id,
+                CancellationToken cancellationToken)
         {
-            var brand =
-                await _brandService.GetBrand(id);
+            var brand = await _brandService
+                .GetBrand(
+                    id,
+                    cancellationToken);
 
 
-            if (brand == null)
+            if (brand is null)
             {
                 return NotFound();
             }
@@ -64,35 +69,47 @@ namespace PharmacyAPI.Controllers
         // =====================================================
 
         [HttpPost]
-        [Authorize]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult<Brand>> CreateBrand(
-            [FromForm] BrandRequest request)
+        public async Task<ActionResult<Brand>>
+            CreateBrand(
+                [FromForm] BrandRequest request,
+                CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
+            if (request is null)
             {
                 return BadRequest(
-                    "Brand name is required."
-                );
+                    "Brand data is required.");
             }
 
 
-            var brand =
-                await _brandService.CreateBrand(
-                    request
-                );
+            if (string.IsNullOrWhiteSpace(request.NameEn) &&
+                string.IsNullOrWhiteSpace(request.NameAr))
+            {
+                return BadRequest(
+                    "Brand name is required.");
+            }
 
 
-            return CreatedAtAction(
-                nameof(GetBrand),
+            try
+            {
+                var brand = await _brandService
+                    .CreateBrand(
+                        request,
+                        cancellationToken);
 
-                new
-                {
-                    id = brand!.Id
-                },
 
-                brand
-            );
+                return CreatedAtAction(
+                    nameof(GetBrand),
+                    new
+                    {
+                        id = brand.Id
+                    },
+                    brand);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
 
@@ -100,41 +117,50 @@ namespace PharmacyAPI.Controllers
         // UPDATE
         // =====================================================
 
-        [HttpPut("{id}")]
-        [Authorize]
+        [HttpPut("{id:int}")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateBrand(
-            int id,
-            [FromForm] BrandRequest request)
+        public async Task<IActionResult>
+            UpdateBrand(
+                int id,
+                [FromForm] BrandRequest request,
+                CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
+            if (request is null)
             {
                 return BadRequest(
-                    "Brand name is required."
-                );
+                    "Brand data is required.");
             }
 
 
-            var result =
-                await _brandService.UpdateBrand(
-                    id,
-                    request
-                );
-
-
-            if (!result)
+            if (string.IsNullOrWhiteSpace(request.NameEn) &&
+                string.IsNullOrWhiteSpace(request.NameAr))
             {
-                return NotFound();
+                return BadRequest(
+                    "Brand name is required.");
             }
 
 
-            return Ok(
-                new
+            try
+            {
+                var result = await _brandService
+                    .UpdateBrand(
+                        id,
+                        request,
+                        cancellationToken);
+
+
+                if (!result)
                 {
-                    message =
-                        "Brand updated successfully."
+                    return NotFound();
                 }
-            );
+
+
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
 
@@ -142,15 +168,16 @@ namespace PharmacyAPI.Controllers
         // DELETE
         // =====================================================
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteBrand(
-            int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult>
+            DeleteBrand(
+                int id,
+                CancellationToken cancellationToken)
         {
-            var result =
-                await _brandService.DeleteBrand(
-                    id
-                );
+            var result = await _brandService
+                .DeleteBrand(
+                    id,
+                    cancellationToken);
 
 
             if (!result)

@@ -48,6 +48,7 @@ builder.Services.AddScoped<IProductService,ProductService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ISliderService, SliderService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<  IBrandService, BrandService>();
 builder.Services.AddScoped<IEmailService, EmailService>();

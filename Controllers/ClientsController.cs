@@ -11,23 +11,34 @@ namespace PharmacyAPI.Controllers
     {
         private readonly IClientService _clientService;
 
-        public ClientsController(IClientService clientService)
+        public ClientsController(
+            IClientService clientService)
         {
             _clientService = clientService;
         }
 
-        // ============================================
+        // =====================================================
         // GET CLIENT BY PHONE
         // GET: api/clients/by-phone/01012345678
-        // ============================================
+        // =====================================================
 
         [HttpGet("by-phone/{phone}")]
         [AllowAnonymous]
-
-        public async Task<IActionResult> GetByPhone(string phone)
+        public async Task<IActionResult> GetByPhone(
+            string phone,
+            CancellationToken cancellationToken)
         {
-            var client =
-                await _clientService.GetByPhone(phone);
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return BadRequest(new
+                {
+                    message = "Phone number is required."
+                });
+            }
+
+            var client = await _clientService.GetByPhone(
+                phone,
+                cancellationToken);
 
             if (client == null)
             {

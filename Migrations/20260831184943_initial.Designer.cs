@@ -12,8 +12,8 @@ using PharmacyAPI.Data;
 namespace PharmacyAPI.Migrations
 {
     [DbContext(typeof(PharmacyDbContext))]
-    [Migration("20260822092411_AddProductDiscountandbrand")]
-    partial class AddProductDiscountandbrand
+    [Migration("20260831184943_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -489,6 +489,9 @@ namespace PharmacyAPI.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsInStock")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")

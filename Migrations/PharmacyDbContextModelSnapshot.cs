@@ -270,7 +270,11 @@ namespace PharmacyAPI.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -336,7 +340,11 @@ namespace PharmacyAPI.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -349,19 +357,22 @@ namespace PharmacyAPI.Migrations
                         {
                             Id = 1,
                             IsDeleted = false,
-                            Name = "Pain Relief"
+                            NameAr = "الالام ",
+                            NameEn = "Pain Relief"
                         },
                         new
                         {
                             Id = 2,
                             IsDeleted = false,
-                            Name = "Vitamins"
+                            NameAr = "فيتامينات",
+                            NameEn = "Vitamins"
                         },
                         new
                         {
                             Id = 3,
                             IsDeleted = false,
-                            Name = "First Aid"
+                            NameAr = "اسعافات اوليه",
+                            NameEn = "First Aid"
                         });
                 });
 
@@ -475,7 +486,10 @@ namespace PharmacyAPI.Migrations
                     b.Property<int>("BrandId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("DescriptionAr")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DescriptionEn")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("DiscountPercentage")
@@ -491,7 +505,11 @@ namespace PharmacyAPI.Migrations
                     b.Property<bool>("IsInStock")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -509,6 +527,22 @@ namespace PharmacyAPI.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("PharmacyAPI.Models.Slider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Sliders");
+                });
+
             modelBuilder.Entity("PharmacyAPI.Models.SubCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -520,13 +554,14 @@ namespace PharmacyAPI.Migrations
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

@@ -3,667 +3,382 @@ using PharmacyAPI.Data;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Models.Responses;
+using System.Linq.Expressions;
 
 namespace PharmacyAPI.Services
 {
     public interface IProductService
     {
         Task<PagedResponse<ProductResponseDto>> GetProducts(
-      int page = 1,
-      int? categoryId = null,
-      int? subCategoryId = null,
-      int? brandId = null,
-      bool? offers = null);
+            int page = 1,
+            int? categoryId = null,
+            int? subCategoryId = null,
+            int? brandId = null,
+            bool? offers = null,
+            CancellationToken cancellationToken = default);
 
-        Task<ProductResponseDto?> GetProduct(int id);
+        Task<ProductResponseDto?> GetProduct(
+            int id,
+            CancellationToken cancellationToken = default);
 
-        Task<ProductDto> CreateProduct(ProductDto dto);
+        Task<ProductDto> CreateProduct(
+            ProductDto dto,
+            CancellationToken cancellationToken = default);
 
         Task<bool> UpdateProduct(
             int id,
-            UpdateProductDto dto);
+            UpdateProductDto dto,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> DeleteProduct(int id);
+        Task<bool> DeleteProduct(
+            int id,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> CheckProductExists(string name);
-        Task<IEnumerable<Product>> GetDiscountedProducts();
+        Task<bool> CheckProductExists(
+            string name,
+            CancellationToken cancellationToken = default);
+
+        Task<List<ProductResponseDto>> GetDiscountedProducts(
+            CancellationToken cancellationToken = default);
+
         Task<List<ProductResponseDto>> GetProductsByName(
-           string name);
+            string name,
+            CancellationToken cancellationToken = default);
 
-        Task<bool> RemoveDiscount(int id);
+        Task<ProductResponseDto?> RemoveDiscount(
+            int id,
+            CancellationToken cancellationToken = default);
+
         Task<List<ProductResponseDto>> GetProductsByIds(
-    List<int> productIds
-);
+            List<int> productIds,
+            CancellationToken cancellationToken = default);
     }
-
 
     public class ProductService : IProductService
     {
         private readonly PharmacyDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        private readonly IEmailService _emailService;
+        private readonly ILogger<ProductService> _logger;
 
         public ProductService(
             PharmacyDbContext context,
             IWebHostEnvironment environment,
-             IEmailService emailService)
+            ILogger<ProductService> logger)
         {
             _context = context;
             _environment = environment;
-            _emailService = emailService;
-        }
-        // ============================================
-        // GET PRODUCTS BY NAME
-        // ============================================
-
-        public async Task<List<ProductResponseDto>> GetProductsByName(
-            string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return new List<ProductResponseDto>();
-            }
-
-            name = name.Trim();
-
-            return await _context.Products
-                .AsNoTracking()
-                .Where(p =>
-                    !p.IsDeleted &&
-                    EF.Functions.Like(
-                        p.Name,
-                        $"%{name}%"
-                    ))
-                .OrderBy(p => p.Id)
-                .Select(p => new ProductResponseDto
-                {
-                    Id = p.Id,
-
-                    Name = p.Name,
-
-                    Description = p.Description,
-
-                    Price = p.Price,
-
-                    DiscountPercentage =
-                        p.DiscountPercentage,
-
-                    StockQuantity =
-                        p.StockQuantity,
-
-                    IsInStock =
-                        p.IsInStock,
-
-                    ImageUrl =
-                        p.ImageUrl,
-
-                    BrandId =
-                        p.BrandId,
-
-                    Brand = p.Brand == null
-                        ? null
-                        : new BrandResponseDto
-                        {
-                            Id = p.Brand.Id,
-
-                            Name = p.Brand.Name,
-
-                            ImageUrl =
-                                p.Brand.ImageUrl
-                        },
-
-                    CategoryId =
-                        p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => (int?)sc.CategoryId)
-                            .FirstOrDefault(),
-
-                    SubCategories =
-                        p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => new SubCategoryResponseDto
-                            {
-                                Id = sc.Id,
-
-                                Name = sc.Name,
-
-                                CategoryId =
-                                    sc.CategoryId,
-
-                                CategoryName =
-                                    sc.Category.Name
-                            })
-                            .ToList()
-                })
-                .ToListAsync();
+            _logger = logger;
         }
 
-
-        // ============================================
-        // GET PRODUCTS BY IDS
-        // ============================================
-
-        public async Task<List<ProductResponseDto>> GetProductsByIds(
-            List<int> productIds)
-        {
-            if (productIds == null || productIds.Count == 0)
-            {
-                return new List<ProductResponseDto>();
-            }
-
-            // Remove duplicates and invalid IDs
-            var ids = productIds
-                .Where(id => id > 0)
-                .Distinct()
-                .ToList();
-
-            if (ids.Count == 0)
-            {
-                return new List<ProductResponseDto>();
-            }
-
-            return await _context.Products
-                .AsNoTracking()
-                .Where(p =>
-                    ids.Contains(p.Id) &&
-                    !p.IsDeleted)
-                .Select(p => new ProductResponseDto
-                {
-                    // ========================================
-                    // BASIC INFORMATION
-                    // ========================================
-
-                    Id = p.Id,
-
-                    Name = p.Name,
-
-                    Description = p.Description,
-
-                    Price = p.Price,
-
-                    DiscountPercentage =
-                        p.DiscountPercentage,
-
-                    StockQuantity =
-                        p.StockQuantity,
-
-                    IsInStock =
-                        p.IsInStock,
-
-                    ImageUrl =
-                        p.ImageUrl,
-
-
-                    // ========================================
-                    // BRAND
-                    // ========================================
-
-                    BrandId =
-                        p.BrandId,
-
-                    Brand = p.Brand == null
-                        ? null
-                        : new BrandResponseDto
-                        {
-                            Id = p.Brand.Id,
-
-                            Name = p.Brand.Name,
-
-                            ImageUrl =
-                                p.Brand.ImageUrl
-                        },
-
-
-                    // ========================================
-                    // CATEGORY
-                    // ========================================
-
-                    CategoryId =
-                        p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => (int?)sc.CategoryId)
-                            .FirstOrDefault(),
-
-
-                    // ========================================
-                    // SUBCATEGORIES
-                    // ========================================
-
-                    SubCategories =
-                        p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => new SubCategoryResponseDto
-                            {
-                                Id = sc.Id,
-
-                                Name = sc.Name,
-
-                                CategoryId =
-                                    sc.CategoryId,
-
-                                CategoryName =
-                                    sc.Category.Name
-
-                            })
-                            .ToList()
-                })
-                .ToListAsync();
-        }
-        public async Task<bool> RemoveDiscount(int id)
-        {
-            var product =
-                await _context.Products
-                    .FirstOrDefaultAsync(p =>
-                        p.Id == id &&
-                        !p.IsDeleted);
-
-            if (product == null)
-            {
-                return false;
-            }
-
-            product.DiscountPercentage = 0;
-
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        public async Task<IEnumerable<Product>> GetDiscountedProducts()
-        {
-            return await _context.Products
-                .Where(p =>
-                    !p.IsDeleted &&
-                    p.DiscountPercentage > 0)
-                .Include(p => p.Brand)
-                .Include(p => p.SubCategories)
-                .ToListAsync();
-        }
-
-        // ============================================
-        // GET ALL PRODUCTS
-        // ============================================
+        // =====================================================
+        // GET PRODUCTS
+        // =====================================================
 
         public async Task<PagedResponse<ProductResponseDto>> GetProducts(
             int page = 1,
             int? categoryId = null,
             int? subCategoryId = null,
             int? brandId = null,
-            bool? offers = null)
+            bool? offers = null,
+            CancellationToken cancellationToken = default)
         {
-            try
+            page = Math.Max(page, 1);
+
+            const int pageSize = 100;
+
+            IQueryable<Product> query = _context.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted);
+
+            // =================================================
+            // FILTERS
+            // =================================================
+
+            if (categoryId.HasValue)
             {
-                const int pageSize = 100;
+                query = query.Where(p =>
+                    p.SubCategories.Any(sc =>
+                        !sc.IsDeleted &&
+                        sc.CategoryId == categoryId.Value));
+            }
 
-                if (page < 1)
-                    page = 1;
+            if (subCategoryId.HasValue)
+            {
+                query = query.Where(p =>
+                    p.SubCategories.Any(sc =>
+                        !sc.IsDeleted &&
+                        sc.Id == subCategoryId.Value));
+            }
 
-                var query = _context.Products
-                    .AsNoTracking()
-                    .Where(p => !p.IsDeleted);
+            if (brandId.HasValue)
+            {
+                query = query.Where(p =>
+                    p.BrandId == brandId.Value);
+            }
 
-                // =========================
-                // FILTERS
-                // =========================
+            if (offers == true)
+            {
+                query = query.Where(p =>
+                    p.DiscountPercentage > 0);
+            }
 
-                if (categoryId.HasValue)
-                {
-                    query = query.Where(p =>
-                        p.SubCategories.Any(sc =>
-                            !sc.IsDeleted &&
-                            sc.CategoryId == categoryId.Value));
-                }
+            // =================================================
+            // CHECK IF FILTERING IS ACTIVE
+            // =================================================
 
-                if (subCategoryId.HasValue)
-                {
-                    query = query.Where(p =>
-                        p.SubCategories.Any(sc =>
-                            !sc.IsDeleted &&
-                            sc.Id == subCategoryId.Value));
-                }
+            bool hasFilters =
+                categoryId.HasValue ||
+                subCategoryId.HasValue ||
+                brandId.HasValue ||
+                offers == true;
 
-                if (brandId.HasValue)
-                {
-                    query = query.Where(p =>
-                        p.BrandId == brandId.Value);
-                }
+            // =================================================
+            // FILTERED REQUEST
+            //
+            // Return ALL matching products.
+            // Angular can then filter locally.
+            // =================================================
 
-                if (offers == true)
-                {
-                    query = query.Where(p =>
-                        p.DiscountPercentage > 0);
-                }
-
-                // =========================
-                // ARE WE FILTERING?
-                // =========================
-
-                bool hasFilters =
-                    categoryId.HasValue ||
-                    subCategoryId.HasValue ||
-                    brandId.HasValue ||
-                    offers == true;
-
-                // =========================
-                // TOTAL
-                // =========================
-
-                var totalCount = await query.CountAsync();
-
-                // =========================
-                // PAGINATION
-                //
-                // NO FILTER = 100
-                // FILTER = ALL
-                // =========================
-
-                int totalPages;
-
-                if (hasFilters)
-                {
-                    totalPages = totalCount > 0 ? 1 : 0;
-                }
-                else
-                {
-                    totalPages =
-                        (int)Math.Ceiling(
-                            totalCount / (double)pageSize);
-
-                    query = query
-                        .OrderBy(p => p.Id)
-                        .Skip((page - 1) * pageSize)
-                        .Take(pageSize);
-                }
-
-                var products = await query
+            if (hasFilters)
+            {
+                var filteredProducts = await query
                     .OrderBy(p => p.Id)
-                    .Select(p => new ProductResponseDto
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Description = p.Description,
-                        Price = p.Price,
-                        DiscountPercentage = p.DiscountPercentage,
-                        StockQuantity = p.StockQuantity,
-                        IsInStock = p.IsInStock,
-                        ImageUrl = p.ImageUrl,
-
-                        BrandId = p.BrandId,
-
-                        Brand = p.Brand == null
-                            ? null
-                            : new BrandResponseDto
-                            {
-                                Id = p.Brand.Id,
-                                Name = p.Brand.Name,
-                                ImageUrl = p.Brand.ImageUrl
-                            },
-
-                        CategoryId = p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => (int?)sc.CategoryId)
-                            .FirstOrDefault(),
-
-                        SubCategories = p.SubCategories
-                            .Where(sc => !sc.IsDeleted)
-                            .Select(sc => new SubCategoryResponseDto
-                            {
-                                Id = sc.Id,
-                                Name = sc.Name,
-                                CategoryId = sc.CategoryId,
-                                CategoryName = sc.Category.Name
-                            })
-                            .ToList()
-                    })
-                    .ToListAsync();
+                    .Select(MapProduct())
+                    .ToListAsync(cancellationToken);
 
                 return new PagedResponse<ProductResponseDto>
                 {
-                    Items = products,
-
-                    Page = hasFilters ? 1 : page,
-
-                    PageSize = hasFilters
-                        ? products.Count
-                        : pageSize,
-
-                    TotalCount = totalCount,
-
-                    TotalPages = totalPages,
-
-                    HasMore =
-                        !hasFilters &&
-                        page < totalPages
+                    Items = filteredProducts,
+                    TotalCount = filteredProducts.Count,
+                    Page = 1,
+                    PageSize = filteredProducts.Count,
+                    TotalPages = filteredProducts.Count > 0 ? 1 : 0,
+                    HasMore = false
                 };
             }
-            catch (Exception ex)
+
+            // =================================================
+            // NORMAL PAGINATION
+            // =================================================
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var totalPages = totalCount == 0
+                ? 0
+                : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var products = await query
+                .OrderBy(p => p.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(MapProduct())
+                .ToListAsync(cancellationToken);
+
+            return new PagedResponse<ProductResponseDto>
             {
-                Console.WriteLine(ex);
-
-                try
-                {
-                    await _emailService.SendEmailAsync(
-                        "erenykaramfci@gmail.com",
-                        "Pharmacy API - Products API Error",
-                        ex.ToString());
-                }
-                catch
-                {
-                }
-
-                throw;
-            }
+                Items = products,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                HasMore = page < totalPages
+            };
         }
-        // ============================================
-        // GET PRODUCT BY ID
-        // ============================================
 
-        public async Task<ProductResponseDto?> GetProduct(int id)
+        // =====================================================
+        // GET PRODUCT BY ID
+        // =====================================================
+
+        public async Task<ProductResponseDto?> GetProduct(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             return await _context.Products
                 .AsNoTracking()
                 .Where(p =>
                     p.Id == id &&
                     !p.IsDeleted)
-                .Select(p => new ProductResponseDto
-                {
-                    Id = p.Id,
-
-                    Name = p.Name,
-
-                    Description = p.Description,
-
-                    Price = p.Price,
-                    IsInStock = p.IsInStock,
-                    StockQuantity = p.StockQuantity,
-                    
-
-                    ImageUrl = p.ImageUrl,
-
-                    SubCategories = p.SubCategories
-                        .Where(sc => !sc.IsDeleted)
-                        .Select(sc => new SubCategoryResponseDto
-                        {
-                            Id = sc.Id,
-
-                            Name = sc.Name,
-
-                            CategoryId = sc.CategoryId,
-
-                            CategoryName = sc.Category.Name
-                        })
-                        .ToList()
-                })
-                .FirstOrDefaultAsync();
+                .Select(MapProduct())
+                .FirstOrDefaultAsync(cancellationToken);
         }
-        // ============================================
-        // CHECK PRODUCT EXISTS
-        // ============================================
 
-        public async Task<bool> CheckProductExists(string name)
+        // =====================================================
+        // GET PRODUCTS BY NAME
+        // =====================================================
+
+        public async Task<List<ProductResponseDto>> GetProductsByName(
+            string name,
+            CancellationToken cancellationToken = default)
+        {
+            name = name.Trim();
+
+            if (string.IsNullOrWhiteSpace(name))
+                return new List<ProductResponseDto>();
+
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeleted &&
+                    EF.Functions.Like(p.NameEn, $"%{name}%"))
+                .OrderBy(p => p.NameEn)
+                .Select(MapProduct())
+                .ToListAsync(cancellationToken);
+        }
+
+        // =====================================================
+        // GET PRODUCTS BY IDS
+        // =====================================================
+
+        public async Task<List<ProductResponseDto>> GetProductsByIds(
+            List<int> productIds,
+            CancellationToken cancellationToken = default)
+        {
+            if (productIds == null || productIds.Count == 0)
+                return new List<ProductResponseDto>();
+
+            var ids = productIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            if (ids.Count == 0)
+                return new List<ProductResponseDto>();
+
+            return await _context.Products
+                .AsNoTracking()
+                .Where(p =>
+                    ids.Contains(p.Id) &&
+                    !p.IsDeleted)
+                .Select(MapProduct())
+                .ToListAsync(cancellationToken);
+        }
+
+        // =====================================================
+        // GET DISCOUNTED PRODUCTS
+        // =====================================================
+
+        public async Task<List<ProductResponseDto>> GetDiscountedProducts(
+            CancellationToken cancellationToken = default)
         {
             return await _context.Products
-                .AnyAsync(p =>
+                .AsNoTracking()
+                .Where(p =>
                     !p.IsDeleted &&
-                    p.Name.ToLower() == name.ToLower());
+                    p.DiscountPercentage > 0)
+                .OrderBy(p => p.Id)
+                .Select(MapProduct())
+                .ToListAsync(cancellationToken);
         }
 
+        // =====================================================
+        // CHECK PRODUCT EXISTS
+        // =====================================================
 
-        // ============================================
-        // CREATE PRODUCT
-        // ============================================
-
-        public async Task<ProductDto> CreateProduct(
-            ProductDto dto)
+        public async Task<bool> CheckProductExists(
+            string name,
+            CancellationToken cancellationToken = default)
         {
-            if (dto.DiscountPercentage < 0 ||
-    dto.DiscountPercentage > 100)
-            {
-                throw new InvalidOperationException(
-                    "Discount percentage must be between 0 and 100."
-                );
-            }
-
-            // Check product name
-            var nameExists = await CheckProductExists(dto.Name);
-
-            if (nameExists)
-                throw new InvalidOperationException(
-                    "A product with this name already exists.");
-
-
-            // Validate subcategories
-            var subCategories = await _context.SubCategories
-                .Where(sc =>
-                    dto.SubCategoryIds.Contains(sc.Id) &&
-                    !sc.IsDeleted)
-                .ToListAsync();
-
-
-            if (subCategories.Count != dto.SubCategoryIds.Distinct().Count())
-            {
-                throw new KeyNotFoundException(
-                    "One or more subcategories were not found.");
-            }
-
-
-            // Save image
-            string? imageUrl = null;
-
-            if (dto.Image != null)
-            {
-                imageUrl = await SaveImage(dto.Image);
-            }
-
-
-            // Create product
-            var product = new Product
-            {
-                Name = dto.Name.Trim(),
-
-                Description = dto.Description,
-                IsInStock = dto.IsInStock,
-                Price = dto.Price,
-
-                StockQuantity = dto.StockQuantity,
-                BrandId=dto.BrandId,
-                ImageUrl = imageUrl,
-                DiscountPercentage = dto.DiscountPercentage
-            };
-
-
-            // Many-to-many relationship
-            foreach (var subCategory in subCategories)
-            {
-                product.SubCategories.Add(subCategory);
-            }
-
-
-            _context.Products.Add(product);
-
-            await _context.SaveChangesAsync();
-
-
-            // Return actual saved product
-            return new ProductDto
-            {
-                Id = product.Id,
-
-                Name = product.Name,
-
-                Description = product.Description,
-
-                Price = product.Price,
-
-                StockQuantity = product.StockQuantity,
-
-                ImageUrl = product.ImageUrl,
-                IsInStock = product.IsInStock,
-
-                SubCategoryIds = product.SubCategories
-                    .Select(sc => sc.Id)
-                    .ToList()
-            };
-        }
-
-
-        // ============================================
-        // UPDATE PRODUCT
-        // ============================================
-
-        public async Task<bool> UpdateProduct(
-            int id,
-            UpdateProductDto dto)
-        {
-
-            if (dto.DiscountPercentage < 0 ||
-    dto.DiscountPercentage > 100)
-            {
-                throw new InvalidOperationException(
-                    "Discount percentage must be between 0 and 100."
-                );
-            }
-
-
-            var product = await _context.Products
-                .Include(p => p.SubCategories)
-                .FirstOrDefaultAsync(p =>
-                    p.Id == id &&
-                    !p.IsDeleted);
-
-
-            if (product == null)
+            if (string.IsNullOrWhiteSpace(name))
                 return false;
 
+            name = name.Trim();
 
-            // Check duplicate name
-            var nameExists = await _context.Products
-                .AnyAsync(p =>
-                    p.Id != id &&
-                    !p.IsDeleted &&
-                    p.Name.ToLower() == dto.Name.ToLower());
+            return await _context.Products
+                .AsNoTracking()
+                .AnyAsync(
+                    p =>
+                        !p.IsDeleted &&
+                        p.NameEn == name,
+                    cancellationToken);
+        }
 
+        // =====================================================
+        // CREATE PRODUCT
+        // =====================================================
 
-            if (nameExists)
+        public async Task<ProductDto> CreateProduct(
+            ProductDto dto,
+            CancellationToken cancellationToken = default)
+        {
+            if (dto == null)
+                throw new ArgumentNullException(nameof(dto));
+
+            // =================================================
+            // VALIDATION
+            // =================================================
+
+            if (string.IsNullOrWhiteSpace(dto.NameEn))
+                throw new InvalidOperationException(
+                    "English product name is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.NameAr))
+                throw new InvalidOperationException(
+                    "Arabic product name is required.");
+
+            if (dto.Price < 0)
+                throw new InvalidOperationException(
+                    "Price cannot be negative.");
+
+            if (dto.StockQuantity < 0)
+                throw new InvalidOperationException(
+                    "Stock quantity cannot be negative.");
+
+            if (dto.DiscountPercentage < 0 ||
+                dto.DiscountPercentage > 100)
             {
                 throw new InvalidOperationException(
-                    "A product with this name already exists.");
+                    "Discount percentage must be between 0 and 100.");
             }
 
+            var nameEn = dto.NameEn.Trim();
 
-            // Validate subcategories
-            var subCategoryIds =
-                dto.SubCategoryIds
-                    .Distinct()
-                    .ToList();
+            // =================================================
+            // DUPLICATE NAME
+            // =================================================
 
+            var duplicateName = await _context.Products
+                .AsNoTracking()
+                .AnyAsync(
+                    p =>
+                        !p.IsDeleted &&
+                        p.NameEn == nameEn,
+                    cancellationToken);
+
+            if (duplicateName)
+            {
+                throw new InvalidOperationException(
+                    "A product with the same English name already exists.");
+            }
+
+            // =================================================
+            // CHECK BRAND
+            // =================================================
+
+            var brandExists = await _context.Brand
+                .AsNoTracking()
+                .AnyAsync(
+                    b =>
+                        b.Id == dto.BrandId &&
+                        !b.IsDeleted,
+                    cancellationToken);
+
+            if (!brandExists)
+                throw new KeyNotFoundException("Brand not found.");
+
+            // =================================================
+            // CHECK SUBCATEGORIES
+            // =================================================
+
+            var subCategoryIds = dto.SubCategoryIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
 
             var subCategories = await _context.SubCategories
                 .Where(sc =>
                     subCategoryIds.Contains(sc.Id) &&
                     !sc.IsDeleted)
-                .ToListAsync();
-
+                .ToListAsync(cancellationToken);
 
             if (subCategories.Count != subCategoryIds.Count)
             {
@@ -671,112 +386,473 @@ namespace PharmacyAPI.Services
                     "One or more subcategories were not found.");
             }
 
+            // =================================================
+            // IMAGE
+            // =================================================
 
-            // Update image
-            if (dto.Image != null)
+            string? imageUrl = null;
+
+            try
             {
-                product.ImageUrl =
-                    await SaveImage(dto.Image);
+                if (dto.Image != null)
+                {
+                    imageUrl = await SaveImage(
+                        dto.Image,
+                        cancellationToken);
+                }
+
+                // =================================================
+                // CREATE PRODUCT
+                // =================================================
+
+                var product = new Product
+                {
+                    NameEn = nameEn,
+                    NameAr = dto.NameAr.Trim(),
+
+                    DescriptionEn =
+                        string.IsNullOrWhiteSpace(dto.DescriptionEn)
+                            ? null
+                            : dto.DescriptionEn.Trim(),
+
+                    DescriptionAr =
+                        string.IsNullOrWhiteSpace(dto.DescriptionAr)
+                            ? null
+                            : dto.DescriptionAr.Trim(),
+
+                    Price = dto.Price,
+                    StockQuantity = dto.StockQuantity,
+                    IsInStock = dto.IsInStock,
+                    DiscountPercentage = dto.DiscountPercentage,
+                    BrandId = dto.BrandId,
+                    ImageUrl = imageUrl,
+                    IsDeleted = false
+                };
+
+                foreach (var subCategory in subCategories)
+                {
+                    product.SubCategories.Add(subCategory);
+                }
+
+                _context.Products.Add(product);
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // =================================================
+                // RETURN DTO
+                // =================================================
+
+                dto.Id = product.Id;
+                dto.ImageUrl = product.ImageUrl;
+
+                return dto;
             }
-
-
-            // Update basic properties
-            product.Name = dto.Name.Trim();
-
-            product.Description = dto.Description;
-
-            product.Price = dto.Price;
-
-            product.StockQuantity = dto.StockQuantity;
-            product.DiscountPercentage =
-    dto.DiscountPercentage;
-            product.BrandId = dto.BrandId;
-            product.IsInStock = dto.IsInStock;
-
-            // ============================================
-            // UPDATE MANY-TO-MANY RELATIONSHIP
-            // ============================================
-
-            product.SubCategories.Clear();
-
-            foreach (var subCategory in subCategories)
+            catch
             {
-                product.SubCategories.Add(subCategory);
+                // Delete uploaded image if DB operation fails
+                if (!string.IsNullOrWhiteSpace(imageUrl))
+                {
+                    DeleteImage(imageUrl);
+                }
+
+                throw;
             }
-
-
-            await _context.SaveChangesAsync();
-
-            return true;
         }
 
+        // =====================================================
+        // UPDATE PRODUCT
+        // =====================================================
 
-        // ============================================
-        // DELETE PRODUCT
-        // ============================================
-
-        public async Task<bool> DeleteProduct(int id)
+        public async Task<bool> UpdateProduct(
+            int id,
+            UpdateProductDto dto,
+            CancellationToken cancellationToken = default)
         {
+            if (dto == null)
+                throw new ArgumentNullException(nameof(dto));
+
+            // =================================================
+            // VALIDATION
+            // =================================================
+
+            if (string.IsNullOrWhiteSpace(dto.NameEn))
+                throw new InvalidOperationException(
+                    "English product name is required.");
+
+            if (string.IsNullOrWhiteSpace(dto.NameAr))
+                throw new InvalidOperationException(
+                    "Arabic product name is required.");
+
+            if (dto.Price < 0)
+                throw new InvalidOperationException(
+                    "Price cannot be negative.");
+
+            if (dto.StockQuantity < 0)
+                throw new InvalidOperationException(
+                    "Stock quantity cannot be negative.");
+
+            if (dto.DiscountPercentage < 0 ||
+                dto.DiscountPercentage > 100)
+            {
+                throw new InvalidOperationException(
+                    "Discount percentage must be between 0 and 100.");
+            }
+
+            var nameEn = dto.NameEn.Trim();
+
+            // =================================================
+            // GET PRODUCT
+            // =================================================
+
             var product = await _context.Products
-                .FirstOrDefaultAsync(p =>
-                    p.Id == id &&
-                    !p.IsDeleted);
+                .Include(p => p.SubCategories)
+                .FirstOrDefaultAsync(
+                    p =>
+                        p.Id == id &&
+                        !p.IsDeleted,
+                    cancellationToken);
 
-
-            if (product == null)
+            if (product is null)
                 return false;
 
+            // =================================================
+            // DUPLICATE NAME
+            // =================================================
 
-            // Soft delete only
+            var duplicateName = await _context.Products
+                .AsNoTracking()
+                .AnyAsync(
+                    p =>
+                        p.Id != id &&
+                        !p.IsDeleted &&
+                        p.NameEn == nameEn,
+                    cancellationToken);
+
+            if (duplicateName)
+            {
+                throw new InvalidOperationException(
+                    "Another product with the same English name already exists.");
+            }
+
+            // =================================================
+            // CHECK BRAND
+            // =================================================
+
+            var brandExists = await _context.Brand
+                .AsNoTracking()
+                .AnyAsync(
+                    b =>
+                        b.Id == dto.BrandId &&
+                        !b.IsDeleted,
+                    cancellationToken);
+
+            if (!brandExists)
+                throw new KeyNotFoundException("Brand not found.");
+
+            // =================================================
+            // CHECK SUBCATEGORIES
+            // =================================================
+
+            var subCategoryIds = dto.SubCategoryIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            var subCategories = await _context.SubCategories
+                .Where(sc =>
+                    subCategoryIds.Contains(sc.Id) &&
+                    !sc.IsDeleted)
+                .ToListAsync(cancellationToken);
+
+            if (subCategories.Count != subCategoryIds.Count)
+            {
+                throw new KeyNotFoundException(
+                    "One or more subcategories were not found.");
+            }
+
+            // =================================================
+            // IMAGE
+            // =================================================
+
+            var oldImageUrl = product.ImageUrl;
+            string? newImageUrl = null;
+
+            try
+            {
+                if (dto.Image != null)
+                {
+                    newImageUrl = await SaveImage(
+                        dto.Image,
+                        cancellationToken);
+
+                    product.ImageUrl = newImageUrl;
+                }
+
+                // =================================================
+                // UPDATE BASIC DATA
+                // =================================================
+
+                product.NameEn = nameEn;
+                product.NameAr = dto.NameAr.Trim();
+
+                product.DescriptionEn =
+                    string.IsNullOrWhiteSpace(dto.DescriptionEn)
+                        ? null
+                        : dto.DescriptionEn.Trim();
+
+                product.DescriptionAr =
+                    string.IsNullOrWhiteSpace(dto.DescriptionAr)
+                        ? null
+                        : dto.DescriptionAr.Trim();
+
+                product.Price = dto.Price;
+                product.StockQuantity = dto.StockQuantity;
+                product.IsInStock = dto.IsInStock;
+                product.DiscountPercentage = dto.DiscountPercentage;
+                product.BrandId = dto.BrandId;
+
+                // =================================================
+                // UPDATE SUBCATEGORIES
+                // =================================================
+
+                product.SubCategories.Clear();
+
+                foreach (var subCategory in subCategories)
+                {
+                    product.SubCategories.Add(subCategory);
+                }
+
+                // =================================================
+                // SAVE
+                // =================================================
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // Delete old image only after successful DB update
+                if (!string.IsNullOrWhiteSpace(oldImageUrl) &&
+                    !string.Equals(
+                        oldImageUrl,
+                        newImageUrl,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    DeleteImage(oldImageUrl);
+                }
+
+                return true;
+            }
+            catch
+            {
+                // Remove newly uploaded image if DB update failed
+                if (!string.IsNullOrWhiteSpace(newImageUrl))
+                {
+                    DeleteImage(newImageUrl);
+                }
+
+                throw;
+            }
+        }
+
+        // =====================================================
+        // REMOVE DISCOUNT
+        // =====================================================
+
+        public async Task<ProductResponseDto?> RemoveDiscount(
+            int id,
+            CancellationToken cancellationToken = default)
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(
+                    p =>
+                        p.Id == id &&
+                        !p.IsDeleted,
+                    cancellationToken);
+
+            if (product is null)
+                return null;
+
+            product.DiscountPercentage = 0;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return await GetProduct(id, cancellationToken);
+        }
+
+        // =====================================================
+        // DELETE PRODUCT
+        // =====================================================
+
+        public async Task<bool> DeleteProduct(
+            int id,
+            CancellationToken cancellationToken = default)
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(
+                    p =>
+                        p.Id == id &&
+                        !p.IsDeleted,
+                    cancellationToken);
+
+            if (product is null)
+                return false;
+
             product.IsDeleted = true;
 
-
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return true;
         }
 
+        // =====================================================
+        // PRODUCT DTO PROJECTION
+        // =====================================================
 
-        // ============================================
+        private static Expression<Func<Product, ProductResponseDto>> MapProduct()
+        {
+            return p => new ProductResponseDto
+            {
+                Id = p.Id,
+
+                NameEn = p.NameEn,
+                NameAr = p.NameAr,
+
+                DescriptionEn = p.DescriptionEn,
+                DescriptionAr = p.DescriptionAr,
+
+                Price = p.Price,
+                StockQuantity = p.StockQuantity,
+                IsInStock = p.IsInStock,
+
+                ImageUrl = p.ImageUrl,
+                
+                DiscountPercentage = p.DiscountPercentage,
+              
+
+                BrandId = p.BrandId,
+
+                Brand = p.Brand == null
+                    ? null
+                    : new BrandResponseDto
+                    {
+                        Id = p.Brand.Id,
+                        NameEn = p.Brand.NameEn,
+                        NameAr = p.Brand.NameAr,
+                        ImageUrl = p.Brand.ImageUrl
+                    },
+
+                SubCategories = p.SubCategories
+                    .Where(sc => !sc.IsDeleted)
+                    .Select(sc => new SubCategoryResponseDto
+                    {
+                        Id = sc.Id,
+                        NameEn = sc.NameEn,
+                        NameAr = sc.NameAr,
+                        CategoryId = sc.CategoryId
+                    })
+                    .ToList()
+            };
+        }
+
+        // =====================================================
         // SAVE IMAGE
-        // ============================================
+        // =====================================================
 
         private async Task<string> SaveImage(
-            IFormFile image)
+            IFormFile image,
+            CancellationToken cancellationToken)
         {
-            var folder =
-                Path.Combine(
+            if (image.Length <= 0)
+                throw new InvalidOperationException(
+                    "Invalid image.");
+
+            const long maxFileSize = 5 * 1024 * 1024;
+
+            if (image.Length > maxFileSize)
+                throw new InvalidOperationException(
+                    "Image size cannot exceed 5 MB.");
+
+            var allowedExtensions = new[]
+            {
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp"
+            };
+
+            var extension =
+                Path.GetExtension(image.FileName)
+                    .ToLowerInvariant();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                throw new InvalidOperationException(
+                    "Only JPG, JPEG, PNG and WEBP images are allowed.");
+            }
+
+            var imagesFolder = Path.Combine(
+                _environment.WebRootPath,
+                "images");
+
+            Directory.CreateDirectory(imagesFolder);
+
+            var fileName =
+                $"{Guid.NewGuid():N}{extension}";
+
+            var filePath = Path.Combine(
+                imagesFolder,
+                fileName);
+
+            await using var stream = new FileStream(
+                filePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 64 * 1024,
+                useAsync: true);
+
+            await image.CopyToAsync(
+                stream,
+                cancellationToken);
+
+            return $"/images/{fileName}";
+        }
+
+        // =====================================================
+        // DELETE IMAGE
+        // =====================================================
+
+        private void DeleteImage(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                return;
+
+            try
+            {
+                var fileName = Path.GetFileName(
+                    imageUrl);
+
+                if (string.IsNullOrWhiteSpace(fileName))
+                    return;
+
+                var imagesFolder = Path.Combine(
                     _environment.WebRootPath,
                     "images");
 
-
-            if (!Directory.Exists(folder))
-            {
-                Directory.CreateDirectory(folder);
-            }
-
-
-            var fileName =
-                Guid.NewGuid().ToString()
-                + Path.GetExtension(image.FileName);
-
-
-            var filePath =
-                Path.Combine(
-                    folder,
+                var filePath = Path.Combine(
+                    imagesFolder,
                     fileName);
 
-
-            await using var stream =
-                new FileStream(
-                    filePath,
-                    FileMode.Create);
-
-
-            await image.CopyToAsync(stream);
-
-
-            return "/images/" + fileName;
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to delete product image: {ImageUrl}",
+                    imageUrl);
+            }
         }
     }
 }

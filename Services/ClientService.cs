@@ -6,8 +6,11 @@ namespace PharmacyAPI.Services
 {
     public interface IClientService
     {
-        Task<Client?> GetByPhone(string phone);
+        Task<Client?> GetByPhone(
+            string phone,
+            CancellationToken cancellationToken = default);
     }
+
     public class ClientService : IClientService
     {
         private readonly PharmacyDbContext _context;
@@ -17,11 +20,24 @@ namespace PharmacyAPI.Services
             _context = context;
         }
 
-        public async Task<Client?> GetByPhone(string phone)
+        // =====================================================
+        // GET CLIENT BY PHONE
+        // =====================================================
+
+        public async Task<Client?> GetByPhone(
+            string phone,
+            CancellationToken cancellationToken = default)
         {
+            if (string.IsNullOrWhiteSpace(phone))
+                return null;
+
+            phone = phone.Trim();
+
             return await _context.Clients
-                .FirstOrDefaultAsync(x =>
-                    x.PhoneNumber == phone);
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.PhoneNumber == phone,
+                    cancellationToken);
         }
     }
 }
