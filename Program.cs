@@ -2,13 +2,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using PharmacyAPI.Data;
 using PharmacyAPI.Models.Authentication;
 using PharmacyAPI.Services;
+using Prometheus;
 using System.Text;
 using System.Text.Json.Serialization;
-using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +76,9 @@ builder.Services.AddCors(opt =>
     });
 });
 
+
+
+
 // JWT Authentication
 var key = Encoding.UTF8.GetBytes(builder.Configuration["JWTSettings:securityKey"]);
 builder.Services.AddAuthentication(options =>
@@ -129,7 +133,7 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 
-    app.UseSwagger();
+app.UseSwagger();
     app.UseSwaggerUI();
 
 

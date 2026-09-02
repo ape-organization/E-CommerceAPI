@@ -155,7 +155,7 @@ namespace PharmacyAPI.Controllers
                 }
 
 
-                return NoContent();
+                return Ok(true);
             }
             catch (ArgumentException ex)
             {

@@ -68,3 +68,9 @@ wwwroot\images\1b55f4ba-18db-4e52-baa6-64087cd7574b.jfif
 wwwroot\uploads\brands\753ccfd09f274bf1bc452b2d6cd92cb9.png
 wwwroot\uploads\categories\2949500990f84ab68aff68a49e648387.png
 wwwroot\images\34500c0fd33241e3b4dc09f3299150a9.png
+wwwroot\uploads\sliders\6c78c5c3874c416f97a63f2ad74d1477.png
+wwwroot\uploads\sliders\7d36c255105245fd987ea033ebbf1bc0.jpg
+wwwroot\uploads\sliders\76a7ab6ab5014bc6b38cc6e32f76c34f.jfif
+wwwroot\uploads\sliders\8a2ce4bfbf4d41048880b196352c4364.jfif
+wwwroot\uploads\sliders\584967dc867144e3afceb1d1c029504b.png
+wwwroot\uploads\categories\56fb184fb48b49869eb766638bff09ac.jfif

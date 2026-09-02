@@ -104,7 +104,7 @@ namespace PharmacyAPI.Controllers
                         dto,
                         cancellationToken);
 
-                return NoContent();
+                return Ok(true);
             }
             catch (KeyNotFoundException)
             {

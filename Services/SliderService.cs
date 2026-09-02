@@ -124,7 +124,7 @@ namespace PharmacyAPI.Services
             if (slider is null)
             {
                 throw new KeyNotFoundException(
-                    "Category not found.");
+                    "Slider not found.");
             }
 
 
@@ -172,6 +172,7 @@ namespace PharmacyAPI.Services
             {
                 DeleteImage(oldImageUrl);
             }
+
         }
 
 
