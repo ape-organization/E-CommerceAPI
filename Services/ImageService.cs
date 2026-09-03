@@ -54,6 +54,6 @@ public class ImageService
             stream,
             cancellationToken);
 
-        return $"/uploads/{folder}/{fileName}";
+        return $"/uploads/E_Commerce/{folder}/{fileName}";
     }
 }
