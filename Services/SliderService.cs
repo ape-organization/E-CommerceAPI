@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PharmacyAPI.Data;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
@@ -31,14 +32,19 @@ namespace PharmacyAPI.Services
     {
         private readonly PharmacyDbContext _context;
         private readonly IWebHostEnvironment _environment;
-
+        private readonly IConfiguration _configuration;
+        private readonly ImageService _imageService;
 
         public SliderService(
+                IConfiguration configuration,
             PharmacyDbContext context,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            ImageService imageService)
         {
+            _configuration = configuration;
             _context = context;
             _environment = environment;
+            _imageService = imageService;
         }
 
         // =====================================================
@@ -89,8 +95,8 @@ namespace PharmacyAPI.Services
 
             if (dto.Image is not null)
             {
-                slider.ImageUrl = await SaveImage(
-                    dto.Image,
+                slider.ImageUrl = await _imageService.SaveImageAsync(
+                    dto.Image,"sliders",
                     cancellationToken);
             }
 
@@ -140,8 +146,8 @@ namespace PharmacyAPI.Services
             {
                 oldImageUrl = slider.ImageUrl;
 
-                slider.ImageUrl = await SaveImage(
-                    dto.Image,
+                slider.ImageUrl = await _imageService.SaveImageAsync(
+                    dto.Image,"sliders",
                     cancellationToken);
             }
 
@@ -181,93 +187,95 @@ namespace PharmacyAPI.Services
         // SAVE IMAGE
         // =====================================================
 
-        private async Task<string> SaveImage(
-            IFormFile image,
-            CancellationToken cancellationToken)
-        {
-            if (image.Length == 0)
-            {
-                throw new ArgumentException(
-                    "Invalid image.");
-            }
+ //       private async Task<string> SaveImage(
+ //           IFormFile image,
+ //           CancellationToken cancellationToken)
+ //       {
+ //           if (image.Length == 0)
+ //           {
+ //               throw new ArgumentException(
+ //                   "Invalid image.");
+ //           }
 
 
-            // -------------------------------------------------
-            // ALLOWED EXTENSIONS
-            // -------------------------------------------------
+ //           // -------------------------------------------------
+ //           // ALLOWED EXTENSIONS
+ //           // -------------------------------------------------
 
-            var allowedExtensions = new HashSet<string>(
-                StringComparer.OrdinalIgnoreCase)
-            {
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".webp",
-                ".jfif"
-            };
-
-
-            var extension = Path.GetExtension(
-                image.FileName);
+ //           var allowedExtensions = new HashSet<string>(
+ //               StringComparer.OrdinalIgnoreCase)
+ //           {
+ //               ".jpg",
+ //               ".jpeg",
+ //               ".png",
+ //               ".webp",
+ //               ".jfif"
+ //           };
 
 
-            if (!allowedExtensions.Contains(extension))
-            {
-                throw new ArgumentException(
-                    "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
-            }
+ //           var extension = Path.GetExtension(
+ //               image.FileName);
 
 
-            // -------------------------------------------------
-            // UPLOAD DIRECTORY
-            // -------------------------------------------------
-
-            var uploadsFolder = Path.Combine(
-                _environment.WebRootPath,
-                "uploads",
-                "sliders");
+ //           if (!allowedExtensions.Contains(extension))
+ //           {
+ //               throw new ArgumentException(
+ //                   "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
+ //           }
 
 
-            Directory.CreateDirectory(uploadsFolder);
+ //           // -------------------------------------------------
+ //           // UPLOAD DIRECTORY
+ //           // -------------------------------------------------
+
+ //           //var uploadsFolder = Path.Combine(
+ //           //    _environment.WebRootPath,
+ //           //    "uploads",
+ //           //    "sliders");
+ //           var uploadsFolder = Path.Combine(
+ //_configuration["FileStorage:UploadPath"]!,
+ //"sliders");
+
+ //           Directory.CreateDirectory(uploadsFolder);
 
 
-            // -------------------------------------------------
-            // UNIQUE FILE NAME
-            // -------------------------------------------------
+ //           // -------------------------------------------------
+ //           // UNIQUE FILE NAME
+ //           // -------------------------------------------------
 
-            var fileName =
-                $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
-
-
-            var filePath = Path.Combine(
-                uploadsFolder,
-                fileName);
+ //           var fileName =
+ //               $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
 
 
-            // -------------------------------------------------
-            // SAVE FILE
-            // -------------------------------------------------
-
-            await using var stream = new FileStream(
-                filePath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 64 * 1024,
-                useAsync: true);
+ //           var filePath = Path.Combine(
+ //               uploadsFolder,
+ //               fileName);
 
 
-            await image.CopyToAsync(
-                stream,
-                cancellationToken);
+ //           // -------------------------------------------------
+ //           // SAVE FILE
+ //           // -------------------------------------------------
+
+ //           await using var stream = new FileStream(
+ //               filePath,
+ //               FileMode.CreateNew,
+ //               FileAccess.Write,
+ //               FileShare.None,
+ //               bufferSize: 64 * 1024,
+ //               useAsync: true);
 
 
-            // -------------------------------------------------
-            // DATABASE PATH
-            // -------------------------------------------------
+ //           await image.CopyToAsync(
+ //               stream,
+ //               cancellationToken);
 
-            return $"/uploads/sliders/{fileName}";
-        }
+
+ //           // -------------------------------------------------
+ //           // DATABASE PATH
+ //           // -------------------------------------------------
+
+ //           return $"/uploads/E_Commerce/sliders/{fileName}";
+ //       }
 
 
         // =====================================================
@@ -286,10 +294,12 @@ namespace PharmacyAPI.Services
                 '\\');
 
 
+            //var filePath = Path.Combine(
+            //    _environment.WebRootPath,
+            //    relativePath);
             var filePath = Path.Combine(
-                _environment.WebRootPath,
-                relativePath);
-
+_configuration["FileStorage:UploadPath"]!,
+relativePath);
 
             try
             {

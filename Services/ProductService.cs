@@ -59,12 +59,17 @@ namespace PharmacyAPI.Services
         private readonly PharmacyDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<ProductService> _logger;
-
+        private readonly IConfiguration _configuration;
+        private readonly ImageService _imageService;
         public ProductService(
+            ImageService imageService,
+            IConfiguration configuration,
             PharmacyDbContext context,
             IWebHostEnvironment environment,
             ILogger<ProductService> logger)
         {
+            _imageService = imageService;
+            _configuration = configuration;
             _context = context;
             _environment = environment;
             _logger = logger;
@@ -185,6 +190,8 @@ namespace PharmacyAPI.Services
             };
         }
 
+
+
         // =====================================================
         // GET PRODUCT BY ID
         // =====================================================
@@ -207,8 +214,8 @@ namespace PharmacyAPI.Services
         // =====================================================
 
         public async Task<List<ProductResponseDto>> GetProductsByName(
-            string name,
-            CancellationToken cancellationToken = default)
+      string name,
+      CancellationToken cancellationToken = default)
         {
             name = name.Trim();
 
@@ -219,11 +226,15 @@ namespace PharmacyAPI.Services
                 .AsNoTracking()
                 .Where(p =>
                     !p.IsDeleted &&
-                    EF.Functions.Like(p.NameEn, $"%{name}%"))
-                .OrderBy(p => p.NameEn)
+                    (
+                        EF.Functions.Like(p.NameEn, $"%{name}%") ||
+                        EF.Functions.Like(p.NameAr, $"%{name}%")
+                    ))
+           
                 .Select(MapProduct())
                 .ToListAsync(cancellationToken);
         }
+
 
         // =====================================================
         // GET PRODUCTS BY IDS
@@ -396,8 +407,8 @@ namespace PharmacyAPI.Services
             {
                 if (dto.Image != null)
                 {
-                    imageUrl = await SaveImage(
-                        dto.Image,
+                    imageUrl = await _imageService.SaveImageAsync(
+                        dto.Image,"products",
                         cancellationToken);
                 }
 
@@ -581,8 +592,8 @@ namespace PharmacyAPI.Services
             {
                 if (dto.Image != null)
                 {
-                    newImageUrl = await SaveImage(
-                        dto.Image,
+                    newImageUrl = await _imageService.SaveImageAsync(
+                        dto.Image,"products",
                         cancellationToken);
 
                     product.ImageUrl = newImageUrl;
@@ -756,65 +767,69 @@ namespace PharmacyAPI.Services
         // SAVE IMAGE
         // =====================================================
 
-        private async Task<string> SaveImage(
-            IFormFile image,
-            CancellationToken cancellationToken)
-        {
-            if (image.Length <= 0)
-                throw new InvalidOperationException(
-                    "Invalid image.");
+    //    private async Task<string> SaveImage(
+    //        IFormFile image,
+    //        CancellationToken cancellationToken)
+    //    {
+    //        if (image.Length <= 0)
+    //            throw new InvalidOperationException(
+    //                "Invalid image.");
 
-            const long maxFileSize = 5 * 1024 * 1024;
+    //        const long maxFileSize = 5 * 1024 * 1024;
 
-            if (image.Length > maxFileSize)
-                throw new InvalidOperationException(
-                    "Image size cannot exceed 5 MB.");
+    //        if (image.Length > maxFileSize)
+    //            throw new InvalidOperationException(
+    //                "Image size cannot exceed 5 MB.");
 
-            var allowedExtensions = new[]
-            {
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".webp"
-            };
+    //        var allowedExtensions = new[]
+    //        {
+    //            ".jpg",
+    //            ".jpeg",
+    //            ".png",
+    //            ".webp"
+    //        };
 
-            var extension =
-                Path.GetExtension(image.FileName)
-                    .ToLowerInvariant();
+    //        var extension =
+    //            Path.GetExtension(image.FileName)
+    //                .ToLowerInvariant();
 
-            if (!allowedExtensions.Contains(extension))
-            {
-                throw new InvalidOperationException(
-                    "Only JPG, JPEG, PNG and WEBP images are allowed.");
-            }
+    //        if (!allowedExtensions.Contains(extension))
+    //        {
+    //            throw new InvalidOperationException(
+    //                "Only JPG, JPEG, PNG and WEBP images are allowed.");
+    //        }
 
-            var imagesFolder = Path.Combine(
-                _environment.WebRootPath,
-                "images");
+    //        //var imagesFolder = Path.Combine(
+    //        //    _environment.WebRootPath,
+    //        //    "images");
+    //        var imagesFolder = Path.Combine(
+    //_configuration["FileStorage:UploadPath"]!,
+    //"products");
 
-            Directory.CreateDirectory(imagesFolder);
+    //        Directory.CreateDirectory(imagesFolder);
 
-            var fileName =
-                $"{Guid.NewGuid():N}{extension}";
+    //        var fileName =
+    //            $"{Guid.NewGuid():N}{extension}";
 
-            var filePath = Path.Combine(
-                imagesFolder,
-                fileName);
+    //        var filePath = Path.Combine(
+    //            imagesFolder,
+    //            fileName);
 
-            await using var stream = new FileStream(
-                filePath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 64 * 1024,
-                useAsync: true);
+    //        await using var stream = new FileStream(
+    //            filePath,
+    //            FileMode.CreateNew,
+    //            FileAccess.Write,
+    //            FileShare.None,
+    //            bufferSize: 64 * 1024,
+    //            useAsync: true);
 
-            await image.CopyToAsync(
-                stream,
-                cancellationToken);
+    //        await image.CopyToAsync(
+    //            stream,
+    //            cancellationToken);
 
-            return $"/images/{fileName}";
-        }
+    //        //return $"/images/{fileName}";
+    //        return $"/uploads/E_Commerce/products/{fileName}";
+    //    }
 
         // =====================================================
         // DELETE IMAGE
@@ -833,13 +848,21 @@ namespace PharmacyAPI.Services
                 if (string.IsNullOrWhiteSpace(fileName))
                     return;
 
+
                 var imagesFolder = Path.Combine(
-                    _environment.WebRootPath,
-                    "images");
+    _configuration["FileStorage:UploadPath"]!,
+    "products");
+                //var imagesFolder = Path.Combine(
+                //    _environment.WebRootPath,
+                //    "images");
 
                 var filePath = Path.Combine(
                     imagesFolder,
                     fileName);
+
+
+
+
 
                 if (File.Exists(filePath))
                 {
