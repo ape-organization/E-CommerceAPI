@@ -132,16 +132,17 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-
-
 app.UseSwagger();
-    app.UseSwaggerUI();
-
-
+app.UseSwaggerUI();
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseRouting();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider("/var/www/uploads"),
+    RequestPath = "/uploads"
+});
 
 app.UseCors("AllowCors");
 
