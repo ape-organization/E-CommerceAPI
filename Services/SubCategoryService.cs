@@ -7,7 +7,7 @@ namespace PharmacyAPI.Services
 {
     public interface ISubCategoryService
     {
-        Task<List<SubCategoryDto>> GetAllAsync(
+        Task<List<SubCategory>> GetAllAsync(
             CancellationToken cancellationToken = default);
 
         Task<SubCategoryDto?> GetByIdAsync(
@@ -64,33 +64,14 @@ namespace PharmacyAPI.Services
         // GET ALL
         // =====================================================
 
-        public async Task<List<SubCategoryDto>> GetAllAsync(
+        public async Task<List<SubCategory>> GetAllAsync(
             CancellationToken cancellationToken = default)
         {
             return await _context.SubCategories
                 .AsNoTracking()
                 .Where(sc =>
-                    !sc.IsDeleted &&
-                    !sc.Category.IsDeleted)
-                .OrderBy(sc => sc.NameEn)
-                .Select(sc => new SubCategoryDto
-                {
-                    Id = sc.Id,
-
-                    NameAr = sc.NameAr,
-                    NameEn = sc.NameEn,
-
-                    CategoryId = sc.CategoryId,
-
-                    CategoryNameEn = sc.Category.NameEn,
-                    CategoryNameAr = sc.Category.NameAr,
-
-                    ProductIds = sc.Products
-                        .Where(p => !p.IsDeleted)
-                        .Select(p => p.Id)
-                        .ToList()
-                })
-                .ToListAsync(cancellationToken);
+                    !sc.IsDeleted )
+              .ToListAsync(cancellationToken);
         }
 
 
@@ -355,8 +336,8 @@ namespace PharmacyAPI.Services
         // =====================================================
 
         public async Task<bool> DeleteAsync(
-            int id,
-            CancellationToken cancellationToken = default)
+      int id,
+      CancellationToken cancellationToken = default)
         {
             var subCategory = await _context.SubCategories
                 .FirstOrDefaultAsync(
@@ -365,23 +346,40 @@ namespace PharmacyAPI.Services
                         !sc.IsDeleted,
                     cancellationToken);
 
-
             if (subCategory is null)
             {
                 return false;
             }
 
+            // Get all active products that belong to this subcategory
+            var products = await _context.Products
+                .Include(p => p.SubCategories)
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.SubCategories.Any(sc => sc.Id == id))
+                .ToListAsync(cancellationToken);
 
+            // Soft delete the subcategory
             subCategory.IsDeleted = true;
 
+            foreach (var product in products)
+            {
+                // Remove the deleted subcategory from the product
+                product.SubCategories.Remove(subCategory);
+
+                // If the product has no other subcategories,
+                // soft delete the product
+                if (!product.SubCategories.Any(sc => !sc.IsDeleted))
+                {
+                    product.IsDeleted = true;
+                }
+            }
 
             await _context.SaveChangesAsync(
                 cancellationToken);
 
-
             return true;
         }
-
 
         // =====================================================
         // ADD PRODUCT

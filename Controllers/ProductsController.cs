@@ -18,7 +18,21 @@ namespace PharmacyAPI.Controllers
         {
             _productService = productService;
         }
+        //=================================================
+        // get best seller product 
+        //=================================================
+        [AllowAnonymous]
+        [HttpGet("best-sellers")]
+        public async Task<ActionResult<List<ProductResponseDto>>> GetBestSellers(
+    [FromQuery] int count = 10,
+    CancellationToken cancellationToken = default)
+        {
+            var products = await _productService.GetBestSellerProducts(
+                count,
+                cancellationToken);
 
+            return Ok(products);
+        }
 
         // =====================================================
         // GET PRODUCTS

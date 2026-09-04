@@ -52,6 +52,9 @@ namespace PharmacyAPI.Services
         Task<List<ProductResponseDto>> GetProductsByIds(
             List<int> productIds,
             CancellationToken cancellationToken = default);
+        Task<List<ProductResponseDto>> GetBestSellerProducts(
+    int count = 10,
+    CancellationToken cancellationToken = default);
     }
 
     public class ProductService : IProductService
@@ -231,7 +234,7 @@ namespace PharmacyAPI.Services
                         EF.Functions.Like(p.NameAr, $"%{name}%")
                     ))
            
-                .Select(MapProduct())
+                .Select(MapProduct()).Take(50)
                 .ToListAsync(cancellationToken);
         }
 
@@ -276,7 +279,44 @@ namespace PharmacyAPI.Services
                 .Where(p =>
                     !p.IsDeleted &&
                     p.DiscountPercentage > 0)
-                .OrderBy(p => p.Id)
+              
+                .Select(MapProduct())
+                .ToListAsync(cancellationToken);
+        }
+
+        // =====================================================
+        // GET BEST SELLER PRODUCTS
+        // =====================================================
+
+        public async Task<List<ProductResponseDto>> GetBestSellerProducts(
+            int count = 10,
+            CancellationToken cancellationToken = default)
+        {
+            if (count <= 0)
+                count = 10;
+
+            return await _context.OrderItems
+                .AsNoTracking()
+                .Where(oi =>
+                    oi.Product != null &&
+                    !oi.Product.IsDeleted &&
+    oi.Order.Status == OrderStatus.Confirmed)
+                .GroupBy(oi => oi.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    SoldQuantity = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(x => x.SoldQuantity)
+                .Take(count)
+                .Join(
+                    _context.Products
+                        .AsNoTracking()
+                        .Where(p => !p.IsDeleted),
+                    bestSeller => bestSeller.ProductId,
+                    product => product.Id,
+                    (bestSeller, product) => product
+                )
                 .Select(MapProduct())
                 .ToListAsync(cancellationToken);
         }
@@ -284,7 +324,6 @@ namespace PharmacyAPI.Services
         // =====================================================
         // CHECK PRODUCT EXISTS
         // =====================================================
-
         public async Task<bool> CheckProductExists(
             string name,
             CancellationToken cancellationToken = default)

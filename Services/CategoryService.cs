@@ -61,7 +61,6 @@ namespace PharmacyAPI.Services
             return await _context.Categories
                 .AsNoTracking()
                 .Where(c => !c.IsDeleted)
-                .OrderBy(c => c.NameEn)
                 .Select(c => new CategoryMenu
                 {
                     Id = c.Id,
@@ -94,8 +93,8 @@ namespace PharmacyAPI.Services
             return await _context.Categories
                 .AsNoTracking()
                 .Where(c => !c.IsDeleted)
-                .Include(c => c.SubCategories)
-                .OrderBy(c => c.NameEn)
+                
+               
                 .ToListAsync(cancellationToken);
         }
 
@@ -113,7 +112,7 @@ namespace PharmacyAPI.Services
                 .Where(c =>
                     c.Id == id &&
                     !c.IsDeleted)
-                .Include(c => c.SubCategories)
+            
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -235,28 +234,51 @@ namespace PharmacyAPI.Services
         // =====================================================
 
         public async Task DeleteCategory(
-            int id,
-            CancellationToken cancellationToken = default)
+     int id,
+     CancellationToken cancellationToken = default)
         {
+            // Get category with its subcategories
             var category = await _context.Categories
+                .Include(c => c.SubCategories)
                 .FirstOrDefaultAsync(
                     c => c.Id == id && !c.IsDeleted,
                     cancellationToken);
 
-
             if (category is null)
             {
-                throw new KeyNotFoundException(
-                    "Category not found.");
+                throw new KeyNotFoundException("Category not found.");
             }
 
+            // Get all subcategory IDs under this category
+            var subCategoryIds = category.SubCategories
+                .Select(sc => sc.Id)
+                .ToList();
 
-            // Soft delete
+            // Soft delete category
             category.IsDeleted = true;
 
+            // Soft delete all subcategories
+            foreach (var subCategory in category.SubCategories)
+            {
+                subCategory.IsDeleted = true;
+            }
 
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            // Soft delete all products belonging to
+            // any subcategory under this category
+            var products = await _context.Products
+                .Include(p => p.SubCategories)
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.SubCategories.Any(sc =>
+                        subCategoryIds.Contains(sc.Id)))
+                .ToListAsync(cancellationToken);
+
+            foreach (var product in products)
+            {
+                product.IsDeleted = true;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
 
@@ -264,95 +286,95 @@ namespace PharmacyAPI.Services
         // SAVE IMAGE
         // =====================================================
 
-    //    private async Task<string> SaveImage(
-    //        IFormFile image,
-    //        CancellationToken cancellationToken)
-    //    {
-    //        if (image.Length == 0)
-    //        {
-    //            throw new ArgumentException(
-    //                "Invalid image.");
-    //        }
+        //    private async Task<string> SaveImage(
+        //        IFormFile image,
+        //        CancellationToken cancellationToken)
+        //    {
+        //        if (image.Length == 0)
+        //        {
+        //            throw new ArgumentException(
+        //                "Invalid image.");
+        //        }
 
 
-    //        // -------------------------------------------------
-    //        // ALLOWED EXTENSIONS
-    //        // -------------------------------------------------
+        //        // -------------------------------------------------
+        //        // ALLOWED EXTENSIONS
+        //        // -------------------------------------------------
 
-    //        var allowedExtensions = new HashSet<string>(
-    //            StringComparer.OrdinalIgnoreCase)
-    //        {
-    //            ".jpg",
-    //            ".jpeg",
-    //            ".png",
-    //            ".webp",
-    //            ".jfif"
-    //        };
-
-
-    //        var extension = Path.GetExtension(
-    //            image.FileName);
+        //        var allowedExtensions = new HashSet<string>(
+        //            StringComparer.OrdinalIgnoreCase)
+        //        {
+        //            ".jpg",
+        //            ".jpeg",
+        //            ".png",
+        //            ".webp",
+        //            ".jfif"
+        //        };
 
 
-    //        if (!allowedExtensions.Contains(extension))
-    //        {
-    //            throw new ArgumentException(
-    //                "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
-    //        }
+        //        var extension = Path.GetExtension(
+        //            image.FileName);
 
 
-    //        // -------------------------------------------------
-    //        // UPLOAD DIRECTORY
-    //        // -------------------------------------------------
-
-    //        //var uploadsFolder = Path.Combine(
-    //        //    _environment.WebRootPath,
-    //        //    "uploads",
-    //        //    "categories");
-    //        var uploadsFolder = Path.Combine(
-    //_configuration["FileStorage:UploadPath"]!,
-    //"categories");
-
-    //        Directory.CreateDirectory(uploadsFolder);
+        //        if (!allowedExtensions.Contains(extension))
+        //        {
+        //            throw new ArgumentException(
+        //                "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
+        //        }
 
 
-    //        // -------------------------------------------------
-    //        // UNIQUE FILE NAME
-    //        // -------------------------------------------------
+        //        // -------------------------------------------------
+        //        // UPLOAD DIRECTORY
+        //        // -------------------------------------------------
 
-    //        var fileName =
-    //            $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        //        //var uploadsFolder = Path.Combine(
+        //        //    _environment.WebRootPath,
+        //        //    "uploads",
+        //        //    "categories");
+        //        var uploadsFolder = Path.Combine(
+        //_configuration["FileStorage:UploadPath"]!,
+        //"categories");
 
-
-    //        var filePath = Path.Combine(
-    //            uploadsFolder,
-    //            fileName);
-
-
-    //        // -------------------------------------------------
-    //        // SAVE FILE
-    //        // -------------------------------------------------
-
-    //        await using var stream = new FileStream(
-    //            filePath,
-    //            FileMode.CreateNew,
-    //            FileAccess.Write,
-    //            FileShare.None,
-    //            bufferSize: 64 * 1024,
-    //            useAsync: true);
+        //        Directory.CreateDirectory(uploadsFolder);
 
 
-    //        await image.CopyToAsync(
-    //            stream,
-    //            cancellationToken);
+        //        // -------------------------------------------------
+        //        // UNIQUE FILE NAME
+        //        // -------------------------------------------------
+
+        //        var fileName =
+        //            $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
 
 
-    //        // -------------------------------------------------
-    //        // DATABASE PATH
-    //        // -------------------------------------------------
+        //        var filePath = Path.Combine(
+        //            uploadsFolder,
+        //            fileName);
 
-    //        return $"/uploads/E_Commerce/categories/{fileName}";
-    //    }
+
+        //        // -------------------------------------------------
+        //        // SAVE FILE
+        //        // -------------------------------------------------
+
+        //        await using var stream = new FileStream(
+        //            filePath,
+        //            FileMode.CreateNew,
+        //            FileAccess.Write,
+        //            FileShare.None,
+        //            bufferSize: 64 * 1024,
+        //            useAsync: true);
+
+
+        //        await image.CopyToAsync(
+        //            stream,
+        //            cancellationToken);
+
+
+        //        // -------------------------------------------------
+        //        // DATABASE PATH
+        //        // -------------------------------------------------
+
+        //        return $"/uploads/E_Commerce/categories/{fileName}";
+        //    }
 
 
         // =====================================================

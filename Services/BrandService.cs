@@ -59,7 +59,6 @@ namespace PharmacyAPI.Services
             return await _context.Brand
                 .AsNoTracking()
                 .Where(b => !b.IsDeleted)
-                .OrderBy(b => b.NameEn)
                 .ToListAsync(cancellationToken);
         }
 
@@ -220,119 +219,127 @@ namespace PharmacyAPI.Services
                         !b.IsDeleted,
                     cancellationToken);
 
-
             if (brand is null)
             {
                 return false;
             }
 
-
-            // Soft delete
+            // Soft delete brand
             brand.IsDeleted = true;
 
+            // Get all active products belonging to this brand
+            var products = await _context.Products
+                .Where(p =>
+                    p.BrandId == id &&
+                    !p.IsDeleted)
+                .ToListAsync(cancellationToken);
+
+            // Soft delete all products
+            foreach (var product in products)
+            {
+                product.IsDeleted = true;
+            }
 
             await _context.SaveChangesAsync(
                 cancellationToken);
 
-
             return true;
         }
-
 
         // =====================================================
         // SAVE IMAGE
         // =====================================================
 
-   //     private async Task<string> SaveImage(
-   //         IFormFile image,
-   //         CancellationToken cancellationToken)
-   //     {
-   //         if (image.Length == 0)
-   //         {
-   //             throw new ArgumentException(
-   //                 "Invalid image.");
-   //         }
+        //     private async Task<string> SaveImage(
+        //         IFormFile image,
+        //         CancellationToken cancellationToken)
+        //     {
+        //         if (image.Length == 0)
+        //         {
+        //             throw new ArgumentException(
+        //                 "Invalid image.");
+        //         }
 
 
-   //         // -------------------------------------------------
-   //         // ALLOWED EXTENSIONS
-   //         // -------------------------------------------------
+        //         // -------------------------------------------------
+        //         // ALLOWED EXTENSIONS
+        //         // -------------------------------------------------
 
-   //         var allowedExtensions = new HashSet<string>(
-   //             StringComparer.OrdinalIgnoreCase)
-   //         {
-   //             ".jpg",
-   //             ".jpeg",
-   //             ".png",
-   //             ".webp",
-   //             ".jfif"
-   //         };
-
-
-   //         var extension =
-   //             Path.GetExtension(image.FileName);
+        //         var allowedExtensions = new HashSet<string>(
+        //             StringComparer.OrdinalIgnoreCase)
+        //         {
+        //             ".jpg",
+        //             ".jpeg",
+        //             ".png",
+        //             ".webp",
+        //             ".jfif"
+        //         };
 
 
-   //         if (!allowedExtensions.Contains(extension))
-   //         {
-   //             throw new ArgumentException(
-   //                 "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
-   //         }
+        //         var extension =
+        //             Path.GetExtension(image.FileName);
 
 
-   //         // -------------------------------------------------
-   //         // UPLOAD DIRECTORY
-   //         // -------------------------------------------------
-
-   //         //var uploadsFolder = Path.Combine(
-   //         //    _environment.WebRootPath,
-   //         //    "uploads",
-   //         //    "brands");
-   //         var uploadsFolder = Path.Combine(
-   //_configuration["FileStorage:UploadPath"]!,
-   //"brands");
-
-   //         Directory.CreateDirectory(
-   //             uploadsFolder);
+        //         if (!allowedExtensions.Contains(extension))
+        //         {
+        //             throw new ArgumentException(
+        //                 "Only JPG, JPEG, PNG, WEBP and JFIF images are allowed.");
+        //         }
 
 
-   //         // -------------------------------------------------
-   //         // UNIQUE FILE NAME
-   //         // -------------------------------------------------
+        //         // -------------------------------------------------
+        //         // UPLOAD DIRECTORY
+        //         // -------------------------------------------------
 
-   //         var fileName =
-   //             $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        //         //var uploadsFolder = Path.Combine(
+        //         //    _environment.WebRootPath,
+        //         //    "uploads",
+        //         //    "brands");
+        //         var uploadsFolder = Path.Combine(
+        //_configuration["FileStorage:UploadPath"]!,
+        //"brands");
 
-
-   //         var filePath = Path.Combine(
-   //             uploadsFolder,
-   //             fileName);
-
-
-   //         // -------------------------------------------------
-   //         // SAVE FILE
-   //         // -------------------------------------------------
-
-   //         await using var stream = new FileStream(
-   //             filePath,
-   //             FileMode.CreateNew,
-   //             FileAccess.Write,
-   //             FileShare.None,
-   //             bufferSize: 64 * 1024,
-   //             useAsync: true);
+        //         Directory.CreateDirectory(
+        //             uploadsFolder);
 
 
-   //         await image.CopyToAsync(
-   //             stream,
-   //             cancellationToken);
+        //         // -------------------------------------------------
+        //         // UNIQUE FILE NAME
+        //         // -------------------------------------------------
+
+        //         var fileName =
+        //             $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
 
 
-   //         // -------------------------------------------------
-   //         // DATABASE PATH
-   //         // -------------------------------------------------
+        //         var filePath = Path.Combine(
+        //             uploadsFolder,
+        //             fileName);
 
-   //         return $"/uploads/E_Commerce/brands/{fileName}";
-   //     }
+
+        //         // -------------------------------------------------
+        //         // SAVE FILE
+        //         // -------------------------------------------------
+
+        //         await using var stream = new FileStream(
+        //             filePath,
+        //             FileMode.CreateNew,
+        //             FileAccess.Write,
+        //             FileShare.None,
+        //             bufferSize: 64 * 1024,
+        //             useAsync: true);
+
+
+        //         await image.CopyToAsync(
+        //             stream,
+        //             cancellationToken);
+
+
+        //         // -------------------------------------------------
+        //         // DATABASE PATH
+        //         // -------------------------------------------------
+
+        //         return $"/uploads/E_Commerce/brands/{fileName}";
+        //     }
 
 
         // =====================================================

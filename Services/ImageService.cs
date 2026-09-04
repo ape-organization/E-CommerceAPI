@@ -28,7 +28,8 @@ public class ImageService
             ".jpg",
             ".jpeg",
             ".png",
-            ".webp"
+            ".webp",
+            ".jfif"
         };
 
         if (!allowedExtensions.Contains(extension))
