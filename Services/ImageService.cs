@@ -40,6 +40,10 @@ public class ImageService
             folder);
 
         Directory.CreateDirectory(folderPath);
+        if (extension == ".jfif")
+        {
+            extension = ".jpg";
+        }
 
         var fileName = $"{Guid.NewGuid():N}{extension}";
 
