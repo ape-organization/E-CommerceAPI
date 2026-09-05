@@ -28,8 +28,7 @@ public class ImageService
             ".jpg",
             ".jpeg",
             ".png",
-            ".webp",
-            ".jfif"
+            ".webp"
         };
 
         if (!allowedExtensions.Contains(extension))
@@ -39,11 +38,7 @@ public class ImageService
             _uploadPath,
             folder);
 
-        Directory.CreateDirectory(folderPath);
-        if (extension == ".jfif")
-        {
-            extension = ".jpg";
-        }
+      
 
         var fileName = $"{Guid.NewGuid():N}{extension}";
 
