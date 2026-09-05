@@ -130,7 +130,7 @@ namespace PharmacyAPI.Services
             if (slider is null)
             {
                 throw new KeyNotFoundException(
-                    "Slider not found.");
+                    "السلايدر غير موجود");
             }
 
 

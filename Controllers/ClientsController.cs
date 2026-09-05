@@ -32,7 +32,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Phone number is required."
+                    message = "رقم الهاتف مطلوب"
                 });
             }
 
@@ -44,7 +44,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Client not found."
+                    message = "العميل غير متوفر"
                 });
             }
 

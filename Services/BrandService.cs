@@ -183,7 +183,7 @@ namespace PharmacyAPI.Services
                 // Remove the newly created image.
                 if (request.Image is not null)
                 {
-                    DeleteImage(brand.ImageUrl);
+                    _imageService.DeleteImage(brand.ImageUrl);
                 }
 
                 throw;
@@ -196,7 +196,7 @@ namespace PharmacyAPI.Services
 
             if (!string.IsNullOrWhiteSpace(oldImageUrl))
             {
-                DeleteImage(oldImageUrl);
+                _imageService.DeleteImage(oldImageUrl);
             }
 
 
@@ -208,15 +208,53 @@ namespace PharmacyAPI.Services
         // DELETE BRAND
         // =====================================================
 
+        //public async Task<bool> DeleteBrand(
+        //    int id,
+        //    CancellationToken cancellationToken = default)
+        //{
+        //    var brand = await _context.Brand
+        //        .FirstOrDefaultAsync(
+        //            b =>
+        //                b.Id == id &&
+        //                !b.IsDeleted,
+        //            cancellationToken);
+
+        //    if (brand is null)
+        //    {
+        //        return false;
+        //    }
+
+        //    // Soft delete brand
+        //    brand.IsDeleted = true;
+
+        //    // Get all active products belonging to this brand
+        //    var products = await _context.Products
+        //        .Where(p =>
+        //            p.BrandId == id &&
+        //            !p.IsDeleted)
+        //        .ToListAsync(cancellationToken);
+
+        //    // Soft delete all products
+        //    foreach (var product in products)
+        //    {
+        //        product.IsDeleted = true;
+        //    }
+
+        //    await _context.SaveChangesAsync(
+        //        cancellationToken);
+
+        //    return true;
+        //}
+
+
         public async Task<bool> DeleteBrand(
-            int id,
-            CancellationToken cancellationToken = default)
+    int id,
+    CancellationToken cancellationToken = default)
         {
+            // Get brand
             var brand = await _context.Brand
                 .FirstOrDefaultAsync(
-                    b =>
-                        b.Id == id &&
-                        !b.IsDeleted,
+                    b => b.Id == id,
                     cancellationToken);
 
             if (brand is null)
@@ -224,24 +262,64 @@ namespace PharmacyAPI.Services
                 return false;
             }
 
-            // Soft delete brand
-            brand.IsDeleted = true;
+            // ---------------------------------------------------------
+            // Save brand image path before deleting
+            // ---------------------------------------------------------
 
-            // Get all active products belonging to this brand
+            var brandImageUrl = brand.ImageUrl;
+
+            // ---------------------------------------------------------
+            // Get ALL products belonging to this brand
+            // ---------------------------------------------------------
+
             var products = await _context.Products
-                .Where(p =>
-                    p.BrandId == id &&
-                    !p.IsDeleted)
+                .Where(p => p.BrandId == id)
                 .ToListAsync(cancellationToken);
 
-            // Soft delete all products
-            foreach (var product in products)
+            // Save product image paths before deleting
+            var productImageUrls = products
+                .Where(p => !string.IsNullOrWhiteSpace(p.ImageUrl))
+                .Select(p => p.ImageUrl!)
+                .ToList();
+
+            // ---------------------------------------------------------
+            // Delete all products
+            // ---------------------------------------------------------
+
+            if (products.Count > 0)
             {
-                product.IsDeleted = true;
+                _context.Products.RemoveRange(products);
             }
 
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            // ---------------------------------------------------------
+            // Delete brand
+            // ---------------------------------------------------------
+
+            _context.Brand.Remove(brand);
+
+            // ---------------------------------------------------------
+            // Save database changes
+            // ---------------------------------------------------------
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // ---------------------------------------------------------
+            // Delete brand image from server
+            // ---------------------------------------------------------
+
+            if (!string.IsNullOrWhiteSpace(brandImageUrl))
+            {
+                _imageService.DeleteImage(brandImageUrl);
+            }
+
+            // ---------------------------------------------------------
+            // Delete product images from server
+            // ---------------------------------------------------------
+
+            foreach (var imageUrl in productImageUrls)
+            {
+                _imageService.DeleteImage(imageUrl);
+            }
 
             return true;
         }
@@ -346,46 +424,48 @@ namespace PharmacyAPI.Services
         // DELETE IMAGE
         // =====================================================
 
-        private void DeleteImage(
-            string? imageUrl)
-        {
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                return;
-            }
+    //    private void DeleteImage(
+    //        string? imageUrl)
+    //    {
+    //        if (string.IsNullOrWhiteSpace(imageUrl))
+    //        {
+    //            return;
+    //        }
 
 
-            var fileName =
-                Path.GetFileName(imageUrl);
+    //        var fileName =
+    //            Path.GetFileName(imageUrl);
 
 
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                return;
-            }
+    //        if (string.IsNullOrWhiteSpace(fileName))
+    //        {
+    //            return;
+    //        }
 
 
-            //var filePath = Path.Combine(
-            //    _environment.WebRootPath,
-            //    "uploads",
-            //    "brands",
-            //    fileName);
-            var filePath = Path.Combine(
-    _configuration["FileStorage:UploadPath"]!,
-    "brands", fileName);
+    //        //var filePath = Path.Combine(
+    //        //    _environment.WebRootPath,
+    //        //    "uploads",
+    //        //    "brands",
+    //        //    fileName);
+    //        var filePath = Path.Combine(
+    //_configuration["FileStorage:UploadPath"]!,
+    //"brands", fileName);
 
-            try
-            {
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
-            }
-            catch
-            {
-                // Image deletion should not cause
-                // the database operation to fail.
-            }
-        }
+    //        try
+    //        {
+    //            if (File.Exists(filePath))
+    //            {
+    //                File.Delete(filePath);
+    //            }
+    //        }
+    //        catch
+    //        {
+    //            // Image deletion should not cause
+    //            // the database operation to fail.
+    //        }
+    //    }
+   
+    
     }
 }

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Models.Responses;
@@ -125,7 +125,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Product not found."
+                    message = "المنتج غير موجود"
                 });
             }
 
@@ -197,7 +197,7 @@ namespace PharmacyAPI.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "Product not found."
+                        message = "المنتج غير موجود"
                     });
                 }
 
@@ -241,7 +241,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Product not found."
+                    message = "المنتج غير موجود"
                 });
             }
 
@@ -268,7 +268,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Product not found."
+                    message = "المنتج غير موجود"
                 });
             }
 
@@ -291,7 +291,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Product name is required."
+                    message = "اسم المنتج مطلوب"
                 });
             }
 
@@ -318,7 +318,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Product name is required."
+                    message = "اسم المنتج مطلوب"
                 });
             }
 

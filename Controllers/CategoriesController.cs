@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
@@ -93,7 +93,7 @@ namespace PharmacyAPI.Controllers
             if (dto is null)
             {
                 return BadRequest(
-                    "Category data is required.");
+                    "بيانات الفئات مطلوبه");
             }
 
 
@@ -101,7 +101,7 @@ namespace PharmacyAPI.Controllers
                 string.IsNullOrWhiteSpace(dto.NameAr))
             {
                 return BadRequest(
-                    "Category name is required.");
+                    "اسم الفئه مطلوب");
             }
 
 
@@ -143,7 +143,7 @@ namespace PharmacyAPI.Controllers
             if (dto is null)
             {
                 return BadRequest(
-                    "Category data is required.");
+                    "بيانات الفئه مطلوبه");
             }
 
 
@@ -151,7 +151,7 @@ namespace PharmacyAPI.Controllers
                 string.IsNullOrWhiteSpace(dto.NameAr))
             {
                 return BadRequest(
-                    "Category name is required.");
+                    "اسم الفئه مطلوب");
             }
 
 

@@ -78,7 +78,7 @@ namespace PharmacyAPI.Controllers
             if (request is null)
             {
                 return BadRequest(
-                    "Brand data is required.");
+                    "بيانات العلامه التجارية مطلوبه");
             }
 
 
@@ -86,7 +86,7 @@ namespace PharmacyAPI.Controllers
                 string.IsNullOrWhiteSpace(request.NameAr))
             {
                 return BadRequest(
-                    "Brand name is required.");
+                    "الاسم مطلوب");
             }
 
 
@@ -128,7 +128,7 @@ namespace PharmacyAPI.Controllers
             if (request is null)
             {
                 return BadRequest(
-                    "Brand data is required.");
+                    "بيانات العلامه التجاريه مطلوبه");
             }
 
 
@@ -136,7 +136,7 @@ namespace PharmacyAPI.Controllers
                 string.IsNullOrWhiteSpace(request.NameAr))
             {
                 return BadRequest(
-                    "Brand name is required.");
+                    "الاسم مطلوب");
             }
 
 

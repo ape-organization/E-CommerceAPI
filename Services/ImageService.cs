@@ -18,7 +18,7 @@ public class ImageService
         CancellationToken cancellationToken = default)
     {
         if (image == null || image.Length == 0)
-            throw new ArgumentException("Image is required.");
+            throw new ArgumentException("الصوره مطلوبه");
 
         var extension = Path.GetExtension(image.FileName)
             .ToLowerInvariant();
@@ -33,7 +33,7 @@ public class ImageService
         };
 
         if (!allowedExtensions.Contains(extension))
-            throw new ArgumentException("Invalid image format.");
+            throw new ArgumentException("نوع الصوره ليس متوافر");
 
         var folderPath = Path.Combine(
             _uploadPath,
@@ -61,4 +61,31 @@ public class ImageService
 
         return $"/uploads/E_Commerce/{folder}/{fileName}";
     }
+    public async  void DeleteImage(string imageUrl)
+    {
+        try
+        {
+            var relativePath = imageUrl
+                .TrimStart('/')
+                .Replace(
+                    "uploads/E_Commerce/",
+                    "",
+                    StringComparison.OrdinalIgnoreCase);
+
+            var filePath = Path.Combine(
+                "/var/www/uploads/E_Commerce",
+                relativePath);
+
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"خطا في مسح الصوره '{imageUrl}': {ex.Message}");
+        }
+    }
+
 }

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
@@ -54,7 +54,7 @@ namespace PharmacyAPI.Controllers
             if (dto is null)
             {
                 return BadRequest(
-                    "slider data is required.");
+                    "الصور مطلوبه");
             }
 
 
@@ -91,7 +91,7 @@ namespace PharmacyAPI.Controllers
             if (dto is null)
             {
                 return BadRequest(
-                    "Category data is required.");
+                    "الصوره مطلوبه");
             }
 
 

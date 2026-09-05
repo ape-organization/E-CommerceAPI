@@ -55,7 +55,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Subcategory not found."
+                    message = "الفئات الفرعيه غير موجوده"
                 });
             }
 
@@ -95,7 +95,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Subcategory data is required."
+                    message = "بيانات الفئات الفرعيه مطلوبه"
                 });
             }
 
@@ -105,7 +105,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Subcategory name is required."
+                    message = "الاسم مطلوب"
                 });
             }
 
@@ -157,7 +157,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Subcategory data is required."
+                    message = "بيانات الفئات الفرعيه غير موجوده"
                 });
             }
 
@@ -167,7 +167,7 @@ namespace PharmacyAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Subcategory name is required."
+                    message = "الاسم مطلوب"
                 });
             }
 
@@ -185,7 +185,7 @@ namespace PharmacyAPI.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "Subcategory not found."
+                        message = "الفئه الفرعيه غير موجوده."
                     });
                 }
 
@@ -228,7 +228,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Subcategory not found."
+                    message = "الفئه الفرعيه غير موجوده"
                 });
             }
 
@@ -260,14 +260,14 @@ namespace PharmacyAPI.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "Subcategory not found."
+                        message = "الفئه الفرعيه غير موجوده"
                     });
                 }
 
 
                 return Ok(new
                 {
-                    message = "Product added to subcategory."
+                    message = "تم اضافه المنتج "
                 });
             }
             catch (KeyNotFoundException ex)
@@ -302,7 +302,7 @@ namespace PharmacyAPI.Controllers
                 return NotFound(new
                 {
                     message =
-                        "Subcategory or product relationship not found."
+                        "حدث خطا"
                 });
             }
 
@@ -334,7 +334,7 @@ namespace PharmacyAPI.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "Subcategory not found."
+                        message = "الفئه الفرعيه غير موجوده"
                     });
                 }
 

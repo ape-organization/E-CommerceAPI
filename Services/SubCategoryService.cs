@@ -52,10 +52,12 @@ namespace PharmacyAPI.Services
     {
         private readonly PharmacyDbContext _context;
 
-
+        private readonly ImageService _imageService;
         public SubCategoryService(
+            ImageService imageService,
             PharmacyDbContext context)
         {
+            _imageService = imageService;
             _context = context;
         }
 
@@ -181,7 +183,7 @@ namespace PharmacyAPI.Services
             if (category is null)
             {
                 throw new KeyNotFoundException(
-                    "Category not found.");
+                    "الفئه غير موجوده");
             }
 
 
@@ -203,7 +205,7 @@ namespace PharmacyAPI.Services
             if (nameExists)
             {
                 throw new InvalidOperationException(
-                    "A subcategory with this name already exists in this category.");
+                    "فئه فرعيه بنفس الاسم موجوده بالفعل في هذه الفئه الرئيسيه");
             }
 
 
@@ -287,7 +289,7 @@ namespace PharmacyAPI.Services
             if (!categoryExists)
             {
                 throw new KeyNotFoundException(
-                    "Category not found.");
+                    "الفئه غير موجوده");
             }
 
 
@@ -310,7 +312,7 @@ namespace PharmacyAPI.Services
             if (nameExists)
             {
                 throw new InvalidOperationException(
-                    "A subcategory with this name already exists in this category.");
+                    "فئه فرعيه بنفس الاسم موجوده بالفعل في الفئه الرئيسيه");
             }
 
 
@@ -334,16 +336,18 @@ namespace PharmacyAPI.Services
         // =====================================================
         // DELETE
         // =====================================================
-
         public async Task<bool> DeleteAsync(
-      int id,
-      CancellationToken cancellationToken = default)
+    int id,
+    CancellationToken cancellationToken = default)
         {
+            // ---------------------------------------------------------
+            // Get subcategory with its products
+            // ---------------------------------------------------------
+
             var subCategory = await _context.SubCategories
+                .Include(sc => sc.Products)
                 .FirstOrDefaultAsync(
-                    sc =>
-                        sc.Id == id &&
-                        !sc.IsDeleted,
+                    sc => sc.Id == id,
                     cancellationToken);
 
             if (subCategory is null)
@@ -351,35 +355,106 @@ namespace PharmacyAPI.Services
                 return false;
             }
 
-            // Get all active products that belong to this subcategory
-            var products = await _context.Products
-                .Include(p => p.SubCategories)
-                .Where(p =>
-                    !p.IsDeleted &&
-                    p.SubCategories.Any(sc => sc.Id == id))
-                .ToListAsync(cancellationToken);
+            // ---------------------------------------------------------
+            // Save product images before deleting products
+            // ---------------------------------------------------------
 
-            // Soft delete the subcategory
-            subCategory.IsDeleted = true;
+            var productImageUrls = new List<string>();
+
+            // Make a copy because we will modify the collection
+            var products = subCategory.Products.ToList();
+
+            // ---------------------------------------------------------
+            // Remove this subcategory from every product
+            // ---------------------------------------------------------
 
             foreach (var product in products)
             {
-                // Remove the deleted subcategory from the product
                 product.SubCategories.Remove(subCategory);
 
-                // If the product has no other subcategories,
-                // soft delete the product
-                if (!product.SubCategories.Any(sc => !sc.IsDeleted))
+                // Product has no other subcategories
+                if (product.SubCategories.Count == 0)
                 {
-                    product.IsDeleted = true;
+                    if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                    {
+                        productImageUrls.Add(product.ImageUrl);
+                    }
+
+                    // Hard delete product
+                    _context.Products.Remove(product);
                 }
             }
 
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            // ---------------------------------------------------------
+            // Hard delete subcategory
+            // ---------------------------------------------------------
+
+            _context.SubCategories.Remove(subCategory);
+
+            // ---------------------------------------------------------
+            // Save database changes
+            // ---------------------------------------------------------
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // ---------------------------------------------------------
+            // Delete product images from disk
+            // ---------------------------------------------------------
+
+            foreach (var imageUrl in productImageUrls)
+            {
+                _imageService.DeleteImage (imageUrl);
+            }
 
             return true;
         }
+        //  public async Task<bool> DeleteAsync(
+        //int id,
+        //CancellationToken cancellationToken = default)
+        //  {
+        //      var subCategory = await _context.SubCategories
+        //          .FirstOrDefaultAsync(
+        //              sc =>
+        //                  sc.Id == id &&
+        //                  !sc.IsDeleted,
+        //              cancellationToken);
+
+        //      if (subCategory is null)
+        //      {
+        //          return false;
+        //      }
+
+        //      // Get all active products that belong to this subcategory
+        //      var products = await _context.Products
+        //          .Include(p => p.SubCategories)
+        //          .Where(p =>
+        //              !p.IsDeleted &&
+        //              p.SubCategories.Any(sc => sc.Id == id))
+        //          .ToListAsync(cancellationToken);
+
+        //      // Soft delete the subcategory
+        //      subCategory.IsDeleted = true;
+
+        //      foreach (var product in products)
+        //      {
+        //          // Remove the deleted subcategory from the product
+        //          product.SubCategories.Remove(subCategory);
+
+        //          // If the product has no other subcategories,
+        //          // soft delete the product
+        //          if (!product.SubCategories.Any(sc => !sc.IsDeleted))
+        //          {
+        //              product.IsDeleted = true;
+        //          }
+        //      }
+
+        //      await _context.SaveChangesAsync(
+        //          cancellationToken);
+
+        //      return true;
+        //  }
+
+
 
         // =====================================================
         // ADD PRODUCT

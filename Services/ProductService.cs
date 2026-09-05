@@ -359,25 +359,25 @@ namespace PharmacyAPI.Services
 
             if (string.IsNullOrWhiteSpace(dto.NameEn))
                 throw new InvalidOperationException(
-                    "English product name is required.");
+                    "الاسم بالانجليزيه مطلوب");
 
             if (string.IsNullOrWhiteSpace(dto.NameAr))
                 throw new InvalidOperationException(
-                    "Arabic product name is required.");
+                    "الاسم بالعربية مطلوب");
 
             if (dto.Price < 0)
                 throw new InvalidOperationException(
-                    "Price cannot be negative.");
+                    "السعر لا يمكن ان يكون بالسالب");
 
             if (dto.StockQuantity < 0)
                 throw new InvalidOperationException(
-                    "Stock quantity cannot be negative.");
+                    "الكميه لا يمكن ان تكون اقل من الصفر");
 
             if (dto.DiscountPercentage < 0 ||
                 dto.DiscountPercentage > 100)
             {
                 throw new InvalidOperationException(
-                    "Discount percentage must be between 0 and 100.");
+                    "النسبه يجب ان تكون من 0 الي 100");
             }
 
             var nameEn = dto.NameEn.Trim();
@@ -397,7 +397,7 @@ namespace PharmacyAPI.Services
             if (duplicateName)
             {
                 throw new InvalidOperationException(
-                    "A product with the same English name already exists.");
+                    "منتج بنفس الاسم بالانجليزيه موجود من قبل ");
             }
 
             // =================================================
@@ -413,7 +413,7 @@ namespace PharmacyAPI.Services
                     cancellationToken);
 
             if (!brandExists)
-                throw new KeyNotFoundException("Brand not found.");
+                throw new KeyNotFoundException("العلامه التجارية غير متوفره");
 
             // =================================================
             // CHECK SUBCATEGORIES
@@ -433,7 +433,7 @@ namespace PharmacyAPI.Services
             if (subCategories.Count != subCategoryIds.Count)
             {
                 throw new KeyNotFoundException(
-                    "One or more subcategories were not found.");
+                    "واحده او اكتر من الفئات الفرعيه متوفره");
             }
 
             // =================================================
@@ -527,25 +527,25 @@ namespace PharmacyAPI.Services
 
             if (string.IsNullOrWhiteSpace(dto.NameEn))
                 throw new InvalidOperationException(
-                    "English product name is required.");
+                    "الاسم بالانجليزيه مطلوب");
 
             if (string.IsNullOrWhiteSpace(dto.NameAr))
                 throw new InvalidOperationException(
-                    "Arabic product name is required.");
+                    "الاسم بالعربيه مطلوب");
 
             if (dto.Price < 0)
                 throw new InvalidOperationException(
-                    "Price cannot be negative.");
+                    "السعر لا يمكن ان يكون بالسالب");
 
             if (dto.StockQuantity < 0)
                 throw new InvalidOperationException(
-                    "Stock quantity cannot be negative.");
+                    "الكميه لا يمكن ان تكون اقل من الصفر");
 
             if (dto.DiscountPercentage < 0 ||
                 dto.DiscountPercentage > 100)
             {
                 throw new InvalidOperationException(
-                    "Discount percentage must be between 0 and 100.");
+                    "النسبه يجب ان تكون من 0 الي 100");
             }
 
             var nameEn = dto.NameEn.Trim();
@@ -581,7 +581,7 @@ namespace PharmacyAPI.Services
             if (duplicateName)
             {
                 throw new InvalidOperationException(
-                    "Another product with the same English name already exists.");
+                    "منتج اخر بنفس الاسم الانجليزي موجود بالفعل ");
             }
 
             // =================================================
@@ -597,7 +597,7 @@ namespace PharmacyAPI.Services
                     cancellationToken);
 
             if (!brandExists)
-                throw new KeyNotFoundException("Brand not found.");
+                throw new KeyNotFoundException("العلامه الفرعيه غير متوفره");
 
             // =================================================
             // CHECK SUBCATEGORIES
@@ -617,7 +617,7 @@ namespace PharmacyAPI.Services
             if (subCategories.Count != subCategoryIds.Count)
             {
                 throw new KeyNotFoundException(
-                    "One or more subcategories were not found.");
+                    "واحد او اكتر من الفئات الفرعيه موجود");
             }
 
             // =================================================

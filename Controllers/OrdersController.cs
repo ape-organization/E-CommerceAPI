@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Services;
@@ -92,7 +92,7 @@ namespace PharmacyAPI.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Order not found."
+                    message = "الطلب غير موجود"
                 });
             }
 
@@ -140,14 +140,14 @@ namespace PharmacyAPI.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "Order not found."
+                        message = "الطلب غير موجود"
                     });
                 }
 
                 return Ok(new
                 {
                     message =
-                        "Order status updated successfully."
+                        "حاله الطلب اتعدلت بنجاح"
                 });
             }
             catch (InvalidOperationException ex)
@@ -180,14 +180,14 @@ namespace PharmacyAPI.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "Order not found."
+                        message = "الطلب غير موجود"
                     });
                 }
 
                 return Ok(new
                 {
                     message =
-                        "Order cancelled successfully."
+                        "تم الغاء الطلب بنجاح"
                 });
             }
             catch (InvalidOperationException ex)
