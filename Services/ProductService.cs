@@ -387,7 +387,7 @@ namespace PharmacyAPI.Services
             if (dto.ActualPrice> discountedPrice)
             {
                 throw new InvalidOperationException(
-                    "السعر الفعلي يجب ان يكون اكثر من السعر بعد الخصم");
+                    "السعر الفعلي يجب ان يكون اقل من السعر بعد الخصم");
             }
 
             var nameEn = dto.NameEn.Trim();
@@ -565,7 +565,7 @@ namespace PharmacyAPI.Services
             if (dto.ActualPrice > discountedPrice)
             {
                 throw new InvalidOperationException(
-                    "السعر الفعلي يجب ان يكون اكثر من السعر بعد الخصم");
+                    "السعر الفعلي يجب ان يكون اقل من السعر بعد الخصم");
             }
             var nameEn = dto.NameEn.Trim();
 
