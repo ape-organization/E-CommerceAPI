@@ -17,7 +17,26 @@ namespace PharmacyAPI.Controllers
         {
             _orderService = orderService;
         }
+        [HttpGet("dashboard/current-month")]
+        public async Task<ActionResult<DashboardStatsDto>> GetCurrentMonthStats(
+     CancellationToken cancellationToken)
+        {
+            var result = await _orderService.GetCurrentMonthStats(
+                cancellationToken);
 
+            return Ok(result);
+        }
+
+
+        [HttpGet("dashboard/total")]
+        public async Task<ActionResult<DashboardStatsDto>> GetTotalStats(
+            CancellationToken cancellationToken)
+        {
+            var result = await _orderService.GetTotalStats(
+                cancellationToken);
+
+            return Ok(result);
+        }
         // =====================================================
         // CREATE ORDER
         // POST: api/orders

@@ -16,6 +16,7 @@ namespace PharmacyAPI.Models
         // =====================================================
 
         public decimal Price { get; set; }
+        public decimal ActualPrice { get; set; }
 
         public int StockQuantity { get; set; }
 

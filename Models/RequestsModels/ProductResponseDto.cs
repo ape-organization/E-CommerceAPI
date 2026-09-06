@@ -12,6 +12,8 @@
         public string? DescriptionEn { get; set; }
 
         public decimal Price { get; set; }
+        public decimal ActualPrice { get; set; }
+
         public bool IsInStock { get; set; } = true;
 
         public decimal DiscountPercentage { get; set; }

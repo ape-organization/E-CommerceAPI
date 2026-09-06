@@ -138,11 +138,11 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider("/var/www/uploads"),
-    RequestPath = "/uploads"
-});
+//app.UseStaticFiles(new StaticFileOptions
+//{
+//    FileProvider = new PhysicalFileProvider("/var/www/uploads"),
+//    RequestPath = "/uploads"
+//});
 
 app.UseCors("AllowCors");
 

@@ -92,7 +92,7 @@ namespace PharmacyAPI.Services
         {
             page = Math.Max(page, 1);
 
-            const int pageSize = 100;
+            const int pageSize = 50;
 
             IQueryable<Product> query = _context.Products
                 .AsNoTracking()
@@ -380,6 +380,16 @@ namespace PharmacyAPI.Services
                     "النسبه يجب ان تكون من 0 الي 100");
             }
 
+            // to check if the actual price is greater than the price after discount
+            var discountedPrice =
+    dto.Price -
+    (dto.Price * dto.DiscountPercentage / 100);
+            if (dto.ActualPrice> discountedPrice)
+            {
+                throw new InvalidOperationException(
+                    "السعر الفعلي يجب ان يكون اكثر من السعر بعد الخصم");
+            }
+
             var nameEn = dto.NameEn.Trim();
 
             // =================================================
@@ -471,6 +481,7 @@ namespace PharmacyAPI.Services
                             : dto.DescriptionAr.Trim(),
 
                     Price = dto.Price,
+                    ActualPrice = dto.ActualPrice,
                     StockQuantity = dto.StockQuantity,
                     IsInStock = dto.IsInStock,
                     DiscountPercentage = dto.DiscountPercentage,
@@ -547,7 +558,15 @@ namespace PharmacyAPI.Services
                 throw new InvalidOperationException(
                     "النسبه يجب ان تكون من 0 الي 100");
             }
-
+            // to check if the actual price is greater than the price after discount
+            var discountedPrice =
+    dto.Price -
+    (dto.Price * dto.DiscountPercentage / 100);
+            if (dto.ActualPrice > discountedPrice)
+            {
+                throw new InvalidOperationException(
+                    "السعر الفعلي يجب ان يكون اكثر من السعر بعد الخصم");
+            }
             var nameEn = dto.NameEn.Trim();
 
             // =================================================
@@ -656,6 +675,7 @@ namespace PharmacyAPI.Services
                         : dto.DescriptionAr.Trim();
 
                 product.Price = dto.Price;
+                product.ActualPrice = dto.ActualPrice;
                 product.StockQuantity = dto.StockQuantity;
                 product.IsInStock = dto.IsInStock;
                 product.DiscountPercentage = dto.DiscountPercentage;
@@ -767,7 +787,7 @@ namespace PharmacyAPI.Services
 
                 DescriptionEn = p.DescriptionEn,
                 DescriptionAr = p.DescriptionAr,
-
+                ActualPrice = p.ActualPrice,
                 Price = p.Price,
                 StockQuantity = p.StockQuantity,
                 IsInStock = p.IsInStock,

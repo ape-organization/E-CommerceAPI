@@ -389,6 +389,46 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "PharmacyAPI.Controllers.OrdersController",
+    "Method": "GetCurrentMonthStats",
+    "RelativePath": "api/Orders/dashboard/current-month",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "PharmacyAPI.Models.RequestsModels.DashboardStatsDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.OrdersController",
+    "Method": "GetTotalStats",
+    "RelativePath": "api/Orders/dashboard/total",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "PharmacyAPI.Models.RequestsModels.DashboardStatsDto",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
     "ContainingType": "PharmacyAPI.Controllers.ProductsController",
     "Method": "GetProducts",
     "RelativePath": "api/Products",
@@ -469,6 +509,11 @@
       },
       {
         "Name": "Price",
+        "Type": "System.Decimal",
+        "IsRequired": false
+      },
+      {
+        "Name": "ActualPrice",
         "Type": "System.Decimal",
         "IsRequired": false
       },
@@ -561,6 +606,11 @@
       },
       {
         "Name": "Price",
+        "Type": "System.Decimal",
+        "IsRequired": false
+      },
+      {
+        "Name": "ActualPrice",
         "Type": "System.Decimal",
         "IsRequired": false
       },

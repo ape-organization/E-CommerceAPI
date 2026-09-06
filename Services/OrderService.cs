@@ -31,6 +31,14 @@ namespace PharmacyAPI.Services
         Task<bool> CancelOrder(
             int id,
             CancellationToken cancellationToken = default);
+
+
+        //dashboard services
+        Task<DashboardStatsDto> GetCurrentMonthStats(
+        CancellationToken cancellationToken = default);
+
+        Task<DashboardStatsDto> GetTotalStats(
+            CancellationToken cancellationToken = default);
     }
 
     public class OrderService : IOrderService
@@ -40,6 +48,103 @@ namespace PharmacyAPI.Services
         public OrderService(PharmacyDbContext context)
         {
             _context = context;
+        }
+        public async Task<DashboardStatsDto> GetCurrentMonthStats(
+       CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.Now;
+
+            var startDate = new DateTime(
+                now.Year,
+                now.Month,
+                1);
+
+            var endDate = startDate.AddMonths(1);
+
+            var orders = _context.Orders
+                .AsNoTracking()
+                .Where(o =>
+                    o.Status != OrderStatus.Cancelled &&
+                    o.OrderDate >= startDate &&
+                    o.OrderDate < endDate);
+
+            var orderItems = _context.OrderItems
+                .AsNoTracking()
+                .Where(i =>
+                    i.Order.Status != OrderStatus.Cancelled &&
+                    i.Order.OrderDate >= startDate &&
+                    i.Order.OrderDate < endDate);
+
+            var ordersCount = await orders
+                .CountAsync(cancellationToken);
+
+            var sales = await orders
+                .SumAsync(
+                    o => o.TotalAmount,
+                    cancellationToken);
+
+            var gain = await orderItems
+                .SumAsync(
+                    i => (i.UnitPrice - i.ActualPrice) * i.Quantity,
+                    cancellationToken);
+
+            return new DashboardStatsDto
+            {
+                Orders = ordersCount,
+
+                Sales = Math.Round(
+                    sales,
+                    2,
+                    MidpointRounding.AwayFromZero),
+
+                Gain = Math.Round(
+                    gain,
+                    2,
+                    MidpointRounding.AwayFromZero)
+            };
+        }
+
+
+        public async Task<DashboardStatsDto> GetTotalStats(
+            CancellationToken cancellationToken = default)
+        {
+            var orders = _context.Orders
+                .AsNoTracking()
+                .Where(o =>
+                    o.Status != OrderStatus.Cancelled);
+
+            var orderItems = _context.OrderItems
+                .AsNoTracking()
+                .Where(i =>
+                    i.Order.Status != OrderStatus.Cancelled);
+
+            var ordersCount = await orders
+                .CountAsync(cancellationToken);
+
+            var sales = await orders
+                .SumAsync(
+                    o => o.TotalAmount,
+                    cancellationToken);
+
+            var gain = await orderItems
+                .SumAsync(
+                    i => (i.UnitPrice - i.ActualPrice) * i.Quantity,
+                    cancellationToken);
+
+            return new DashboardStatsDto
+            {
+                Orders = ordersCount,
+
+                Sales = Math.Round(
+                    sales,
+                    2,
+                    MidpointRounding.AwayFromZero),
+
+                Gain = Math.Round(
+                    gain,
+                    2,
+                    MidpointRounding.AwayFromZero)
+            };
         }
 
         // =====================================================
@@ -222,9 +327,9 @@ namespace PharmacyAPI.Services
         //    return order;
         //}
 
-      
-        
-public async Task<Order> CreateOrder(
+
+
+        public async Task<Order> CreateOrder(
     CreateOrderDto dto,
     CancellationToken cancellationToken = default)
         {
@@ -526,6 +631,7 @@ public async Task<Order> CreateOrder(
                     order.Items.Add(
                         new OrderItem
                         {
+                            ActualPrice=product.ActualPrice,
                             ProductId =
                                 product.Id,
 

@@ -494,6 +494,64 @@
         }
       }
     },
+    "/api/Orders/dashboard/current-month": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders/dashboard/total": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Orders": {
       "post": {
         "tags": [
@@ -805,6 +863,10 @@
                     "type": "number",
                     "format": "double"
                   },
+                  "ActualPrice": {
+                    "type": "number",
+                    "format": "double"
+                  },
                   "StockQuantity": {
                     "type": "integer",
                     "format": "int32"
@@ -853,6 +915,9 @@
                   "style": "form"
                 },
                 "Price": {
+                  "style": "form"
+                },
+                "ActualPrice": {
                   "style": "form"
                 },
                 "StockQuantity": {
@@ -1017,6 +1082,10 @@
                     "type": "number",
                     "format": "double"
                   },
+                  "ActualPrice": {
+                    "type": "number",
+                    "format": "double"
+                  },
                   "StockQuantity": {
                     "type": "integer",
                     "format": "int32"
@@ -1059,6 +1128,9 @@
                   "style": "form"
                 },
                 "Price": {
+                  "style": "form"
+                },
+                "ActualPrice": {
                   "style": "form"
                 },
                 "StockQuantity": {
@@ -2260,6 +2332,24 @@
         },
         "additionalProperties": false
       },
+      "DashboardStatsDto": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sales": {
+            "type": "number",
+            "format": "double"
+          },
+          "gain": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
       "GetProductsByIdsRequest": {
         "type": "object",
         "properties": {
@@ -2337,6 +2427,10 @@
           "unitPrice": {
             "type": "number",
             "format": "double"
+          },
+          "actualPrice": {
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false
@@ -2377,6 +2471,10 @@
             "nullable": true
           },
           "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "actualPrice": {
             "type": "number",
             "format": "double"
           },
@@ -2455,6 +2553,10 @@
             "nullable": true
           },
           "price": {
+            "type": "number",
+            "format": "double"
+          },
+          "actualPrice": {
             "type": "number",
             "format": "double"
           },
