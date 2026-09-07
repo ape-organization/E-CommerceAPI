@@ -132,6 +132,26 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+// this fro auto migration
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var db = services.GetRequiredService<PharmacyDbContext>();
+
+        await db.Database.MigrateAsync();
+
+        Console.WriteLine("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration failed: {ex.Message}");
+        throw;
+    }
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseHttpsRedirection();
