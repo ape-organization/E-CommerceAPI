@@ -248,11 +248,7 @@ namespace PharmacyAPI.Services
                 throw new KeyNotFoundException("الفئات غير متوفره");
             }
 
-            // ---------------------------------------------------------
-            // Save category image path before deleting category
-            // ---------------------------------------------------------
-
-            var categoryImageUrl = category.ImageUrl;
+          
 
             // ---------------------------------------------------------
             // Get all subcategory IDs
@@ -273,11 +269,7 @@ namespace PharmacyAPI.Services
                         subCategoryIds.Contains(sc.Id)))
                 .ToListAsync(cancellationToken);
 
-            // Save product image paths before deleting products
-            var productImageUrls = products
-                .Where(p => !string.IsNullOrWhiteSpace(p.ImageUrl))
-                .Select(p => p.ImageUrl!)
-                .ToList();
+           
 
             // ---------------------------------------------------------
             // Remove Product <-> SubCategory relationships
@@ -294,7 +286,8 @@ namespace PharmacyAPI.Services
 
             if (products.Count > 0)
             {
-                _context.Products.RemoveRange(products);
+                products.ForEach(p => p.IsDeleted = true);
+                _context.Products.UpdateRange(products);
             }
 
             // ---------------------------------------------------------
@@ -303,7 +296,8 @@ namespace PharmacyAPI.Services
 
             if (category.SubCategories.Count > 0)
             {
-                _context.SubCategories.RemoveRange(
+                category.SubCategories.ToList().ForEach(sc => sc.IsDeleted = true);
+                _context.SubCategories.UpdateRange(
                     category.SubCategories);
             }
 
@@ -311,7 +305,8 @@ namespace PharmacyAPI.Services
             // Delete category
             // ---------------------------------------------------------
 
-            _context.Categories.Remove(category);
+            category.IsDeleted = true;
+            _context.Categories.Update(category);
 
             // ---------------------------------------------------------
             // Save everything to database
@@ -319,23 +314,7 @@ namespace PharmacyAPI.Services
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            // ---------------------------------------------------------
-            // Delete category image
-            // ---------------------------------------------------------
-
-            if (!string.IsNullOrWhiteSpace(categoryImageUrl))
-            {
-                _imageService.DeleteImage(categoryImageUrl);
-            }
-
-            // ---------------------------------------------------------
-            // Delete product images
-            // ---------------------------------------------------------
-
-            foreach (var imageUrl in productImageUrls)
-            {
-                _imageService.DeleteImage (imageUrl);
-            }
+            
         }
         //   public async Task DeleteCategory(
         //int id,

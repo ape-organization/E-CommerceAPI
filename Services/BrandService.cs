@@ -262,25 +262,17 @@ namespace PharmacyAPI.Services
                 return false;
             }
 
-            // ---------------------------------------------------------
-            // Save brand image path before deleting
-            // ---------------------------------------------------------
-
-            var brandImageUrl = brand.ImageUrl;
+            
 
             // ---------------------------------------------------------
             // Get ALL products belonging to this brand
             // ---------------------------------------------------------
 
             var products = await _context.Products
-                .Where(p => p.BrandId == id)
+                .Where(p => p.BrandId == id &&!p.IsDeleted)
                 .ToListAsync(cancellationToken);
 
-            // Save product image paths before deleting
-            var productImageUrls = products
-                .Where(p => !string.IsNullOrWhiteSpace(p.ImageUrl))
-                .Select(p => p.ImageUrl!)
-                .ToList();
+           
 
             // ---------------------------------------------------------
             // Delete all products
@@ -288,14 +280,15 @@ namespace PharmacyAPI.Services
 
             if (products.Count > 0)
             {
-                _context.Products.RemoveRange(products);
+                products.ForEach(p => p.IsDeleted = true);
+                _context.Products.UpdateRange(products);
             }
 
             // ---------------------------------------------------------
             // Delete brand
             // ---------------------------------------------------------
-
-            _context.Brand.Remove(brand);
+            brand.IsDeleted = true;
+            _context.Brand.Update(brand);
 
             // ---------------------------------------------------------
             // Save database changes
@@ -303,23 +296,7 @@ namespace PharmacyAPI.Services
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            // ---------------------------------------------------------
-            // Delete brand image from server
-            // ---------------------------------------------------------
-
-            if (!string.IsNullOrWhiteSpace(brandImageUrl))
-            {
-                _imageService.DeleteImage(brandImageUrl);
-            }
-
-            // ---------------------------------------------------------
-            // Delete product images from server
-            // ---------------------------------------------------------
-
-            foreach (var imageUrl in productImageUrls)
-            {
-                _imageService.DeleteImage(imageUrl);
-            }
+            
 
             return true;
         }

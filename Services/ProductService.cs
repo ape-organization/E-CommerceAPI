@@ -766,6 +766,7 @@ namespace PharmacyAPI.Services
                 return false;
 
             product.IsDeleted = true;
+            _context.Products.Update(product);
 
             await _context.SaveChangesAsync(cancellationToken);
 
