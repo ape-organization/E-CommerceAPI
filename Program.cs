@@ -69,7 +69,9 @@ builder.Services.AddCors(opt =>
                 "http://localhost:5000",
                 "http://localhost:5555",
                 "https://adminpanel.ape-org.com",
-                "https://e-commerce.ape-org.com"
+                "https://e-commerce.ape-org.com",
+                "https://pinkyaura.ape-org.com",
+                "https://adminpinkyaura.ape-org.com"
             )
         .AllowAnyHeader()
         .AllowAnyMethod()
