@@ -708,6 +708,86 @@
         }
       }
     },
+    "/api/Products/bySubID/{subID}/{productId}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "parameters": [
+          {
+            "name": "subID",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Products/new": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Products/best-sellers": {
       "get": {
         "tags": [
@@ -1964,6 +2044,87 @@
           }
         }
       }
+    },
+    "/api/WebsiteVisits": {
+      "post": {
+        "tags": [
+          "WebsiteVisits"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteVisitDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteVisitDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebsiteVisitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/WebsiteVisits/monthly": {
+      "get": {
+        "tags": [
+          "WebsiteVisits"
+        ],
+        "parameters": [
+          {
+            "name": "months",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MonthlyVisitorsDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MonthlyVisitorsDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MonthlyVisitorsDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2235,6 +2396,10 @@
             "type": "string",
             "nullable": true
           },
+          "governorate": {
+            "type": "string",
+            "nullable": true
+          },
           "address": {
             "type": "string",
             "nullable": true
@@ -2274,6 +2439,10 @@
             "nullable": true
           },
           "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "governorate": {
             "type": "string",
             "nullable": true
           },
@@ -2360,6 +2529,24 @@
               "format": "int32"
             },
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MonthlyVisitorsDto": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "month": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visitors": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -2525,6 +2712,10 @@
               "$ref": "#/components/schemas/OrderItem"
             },
             "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -2839,6 +3030,16 @@
             "nullable": true
           },
           "role": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "WebsiteVisitDto": {
+        "type": "object",
+        "properties": {
+          "visitorId": {
             "type": "string",
             "nullable": true
           }

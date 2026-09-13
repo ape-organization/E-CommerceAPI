@@ -81,5 +81,6 @@ namespace PharmacyAPI.Models
 
         public ICollection<OrderItem> OrderItems { get; set; }
             = new List<OrderItem>();
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

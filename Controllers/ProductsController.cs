@@ -18,6 +18,38 @@ namespace PharmacyAPI.Controllers
         {
             _productService = productService;
         }
+        //===========================================
+        //new arrival 
+        //===========================================
+        [HttpGet("bySubID/{subID}/{productId}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PagedResponse<ProductResponseDto>>> GetProductsbySubCategory(int subID,int productId,
+
+            CancellationToken cancellationToken = default)
+        {
+
+
+            var result =
+                await _productService.getProductsbySubCategory(subID, productId,cancellationToken);
+
+            return Ok(result);
+        }
+        //===========================================
+        //new arrival 
+        //===========================================
+        [HttpGet("new")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PagedResponse<ProductResponseDto>>> GetNewArrivalProducts(
+
+            CancellationToken cancellationToken = default)
+        {
+
+
+            var result =
+                await _productService.GetNewArrivalProducts(cancellationToken);
+
+            return Ok(result);
+        }
         //=================================================
         // get best seller product 
         //=================================================

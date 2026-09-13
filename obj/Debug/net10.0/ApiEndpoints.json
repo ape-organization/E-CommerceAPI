@@ -723,6 +723,37 @@
   },
   {
     "ContainingType": "PharmacyAPI.Controllers.ProductsController",
+    "Method": "GetProductsbySubCategory",
+    "RelativePath": "api/Products/bySubID/{subID}/{productId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "subID",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "productId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "PharmacyAPI.Models.Responses.PagedResponse\u00601[[PharmacyAPI.Models.RequestsModels.ProductResponseDto, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.ProductsController",
     "Method": "GetCartProducts",
     "RelativePath": "api/Products/cart",
     "HttpMethod": "POST",
@@ -764,6 +795,26 @@
     "ReturnTypes": [
       {
         "Type": "System.Collections.Generic.List\u00601[[PharmacyAPI.Models.RequestsModels.ProductResponseDto, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.ProductsController",
+    "Method": "GetNewArrivalProducts",
+    "RelativePath": "api/Products/new",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "PharmacyAPI.Models.Responses.PagedResponse\u00601[[PharmacyAPI.Models.RequestsModels.ProductResponseDto, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -1169,5 +1220,47 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WebsiteVisitsController",
+    "Method": "RecordVisit",
+    "RelativePath": "api/WebsiteVisits",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "PharmacyAPI.Models.RequestsModels.WebsiteVisitDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WebsiteVisitsController",
+    "Method": "GetMonthlyVisitors",
+    "RelativePath": "api/WebsiteVisits/monthly",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "months",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.List\u00601[[PharmacyAPI.Models.RequestsModels.MonthlyVisitorsDto, PharmacyAPI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
   }
 ]

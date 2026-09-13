@@ -15,6 +15,7 @@ namespace PharmacyAPI.Data
         }
 
         public DbSet<Product> Products { get; set; } = null!;
+        public DbSet<WebsiteVisit> websiteVisits { get; set; }
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Order> Orders { get; set; } = null!;
         public DbSet<OrderItem> OrderItems { get; set; } = null!;
@@ -27,6 +28,23 @@ namespace PharmacyAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<WebsiteVisit>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.VisitorId)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.VisitedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new
+                {
+                    x.VisitedAt,
+                    x.VisitorId
+                });
+            });
             base.OnModelCreating(modelBuilder);
 
             // ============================================
@@ -144,7 +162,22 @@ namespace PharmacyAPI.Data
             modelBuilder.Entity<OrderItem>()
                 .Property(i => i.UnitPrice)
                 .HasPrecision(18, 2);
+            //============================================
+            // indexes
+            //============================================
+            modelBuilder.Entity<Order>()
+    .HasIndex(x => new
+    {
+        x.Status,
+        x.OrderDate
+    });
 
+            modelBuilder.Entity<OrderItem>()
+                .HasIndex(x => new
+                {
+                    x.ProductId,
+                    x.OrderId
+                });
 
             // ============================================
             // Seed Categories

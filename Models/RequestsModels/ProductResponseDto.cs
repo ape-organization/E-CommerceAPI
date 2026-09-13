@@ -38,7 +38,32 @@
             = new();
     }
 
+    public class SubProductResponseDto
+    {
+        public int Id { get; set; }
 
+        public string NameAr { get; set; } = string.Empty;
+
+        public string NameEn { get; set; } = string.Empty;
+
+   
+
+        public decimal Price { get; set; }
+        public decimal ActualPrice { get; set; }
+
+        public bool IsInStock { get; set; } = true;
+
+        public decimal DiscountPercentage { get; set; }
+
+
+
+        public string? ImageUrl { get; set; }
+
+
+        public int? BrandId { get; set; }
+
+     
+    }
     // =========================================================
     // BRAND RESPONSE
     // =========================================================

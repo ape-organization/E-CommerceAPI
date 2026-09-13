@@ -14,6 +14,7 @@ namespace PharmacyAPI.Models.RequestsModels
         public string? Email { get; set; }
 
         public string? Address { get; set; }
+        public string? governorate { get; set; }
 
         public DateTime OrderDate { get; set; }
 

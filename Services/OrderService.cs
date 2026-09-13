@@ -360,6 +360,11 @@ namespace PharmacyAPI.Services
                 throw new InvalidOperationException(
                     "عنوان العميل مطلوب.");
             }
+            if (string.IsNullOrWhiteSpace(dto.Client.governorate))
+            {
+                throw new InvalidOperationException(
+                    "محافظة العميل مطلوب.");
+            }
 
             if (dto.Items == null || dto.Items.Count == 0)
             {
@@ -487,6 +492,9 @@ namespace PharmacyAPI.Services
                         Address =
                             dto.Client.Address.Trim(),
 
+                        governorate =
+
+                            dto.Client.governorate.Trim(),
                         Email =
                             string.IsNullOrWhiteSpace(
                                 dto.Client.Email)
@@ -512,6 +520,8 @@ namespace PharmacyAPI.Services
 
                     client.Address =
                         dto.Client.Address.Trim();
+                    client.governorate =
+                       dto.Client.governorate.Trim();    
 
                     client.Email =
                         string.IsNullOrWhiteSpace(
@@ -828,6 +838,7 @@ namespace PharmacyAPI.Services
                 Email = o.Client.Email,
 
                 Address = o.Client.Address,
+                governorate = o.Client.governorate,
 
                 OrderDate = o.OrderDate,
 

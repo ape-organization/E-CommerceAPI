@@ -46,6 +46,7 @@ builder.Services.AddScoped<JwtHandler>();
 
 //all services 
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddScoped<WebsiteVisitService>();
 builder.Services.AddScoped<IProductService,ProductService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();

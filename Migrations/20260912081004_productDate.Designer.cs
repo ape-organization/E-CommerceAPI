@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PharmacyAPI.Data;
 
@@ -11,9 +12,11 @@ using PharmacyAPI.Data;
 namespace PharmacyAPI.Migrations
 {
     [DbContext(typeof(PharmacyDbContext))]
-    partial class PharmacyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260912081004_productDate")]
+    partial class productDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -404,9 +407,6 @@ namespace PharmacyAPI.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("governorate")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("PhoneNumber")
@@ -584,29 +584,6 @@ namespace PharmacyAPI.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("SubCategories");
-                });
-
-            modelBuilder.Entity("PharmacyAPI.Models.WebsiteVisit", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("VisitedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("VisitorId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VisitedAt", "VisitorId");
-
-                    b.ToTable("websiteVisits");
                 });
 
             modelBuilder.Entity("ProductSubCategory", b =>

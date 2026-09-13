@@ -8,6 +8,7 @@
 
         public string PhoneNumber { get; set; } = string.Empty;
 
+        public string? governorate { get; set; }
         public string? Address { get; set; }
 
         public string? Email { get; set; }
