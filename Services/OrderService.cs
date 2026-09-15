@@ -1,8 +1,9 @@
-﻿using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PharmacyAPI.Data;
 using PharmacyAPI.Models;
 using PharmacyAPI.Models.RequestsModels;
+using PharmacyAPI.Models.Responses;
+using System.Linq.Expressions;
 
 namespace PharmacyAPI.Services
 {
@@ -16,8 +17,10 @@ namespace PharmacyAPI.Services
             int id,
             CancellationToken cancellationToken = default);
 
-        Task<List<OrderDto>> GetOrders(
-            CancellationToken cancellationToken = default);
+        Task<PagedResponse<OrderDto>> GetOrders(
+    int page = 1,
+    int pageSize = 20,
+    CancellationToken cancellationToken = default);
 
         Task<List<OrderDto>> GetOrdersByClient(
             int clientId,
@@ -694,21 +697,36 @@ namespace PharmacyAPI.Services
             }
         }
 
-        
-        
+
+
         // =====================================================
         // GET ALL ORDERS
         // =====================================================
-
-        public async Task<List<OrderDto>> GetOrders(
-            CancellationToken cancellationToken = default)
+        public async Task<PagedResponse<OrderDto>> GetOrders(int page = 1, int pageSize = 30,
+            CancellationToken cancellationToken = default) 
         {
-            return await _context.Orders
-                .AsNoTracking()
-                .OrderByDescending(o => o.OrderDate)
-                .Select(OrderProjection())
-                .ToListAsync(cancellationToken);
-        }
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100); 
+            var items = await _context.Orders.AsNoTracking().OrderByDescending(o => o.OrderDate)
+                .Skip((page - 1) * pageSize).Take(pageSize + 1).Select(OrderProjection())
+                .ToListAsync(cancellationToken); 
+            var hasMore = items.Count > pageSize; 
+            if (hasMore) { items.RemoveAt(items.Count - 1); }
+            return new PagedResponse<OrderDto> 
+        { Items = items, Page = page, PageSize = pageSize, HasMore = hasMore }; }
+
+
+
+
+        //public async Task<List<OrderDto>> GetOrders(
+        //    CancellationToken cancellationToken = default)
+        //{
+        //    return await _context.Orders
+        //        .AsNoTracking()
+        //        .OrderByDescending(o => o.OrderDate)
+        //        .Select(OrderProjection())
+        //        .ToListAsync(cancellationToken);
+        //}
 
         // =====================================================
         // GET ORDER BY ID

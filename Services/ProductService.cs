@@ -230,6 +230,10 @@ namespace PharmacyAPI.Services
                 HasMore = page < totalPages
             };
         }
+      
+        
+        
+        
         //public async Task<PagedResponse<ProductResponseDto>> GetProducts(
         //    int page = 1,
         //    int? categoryId = null,
