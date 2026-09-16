@@ -59,7 +59,7 @@
 
         public string? ImageUrl { get; set; }
 
-
+        public BrandResponseDto? Brand { get; set; }    
         public int? BrandId { get; set; }
 
      

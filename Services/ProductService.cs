@@ -973,7 +973,14 @@ namespace PharmacyAPI.Services
                 ImageUrl = p.ImageUrl,
 
                 DiscountPercentage = p.DiscountPercentage,
-
+                Brand = p.Brand == null
+                    ? null
+                    : new BrandResponseDto
+                    {
+                        Id = p.Brand.Id,
+                        NameEn = p.Brand.NameEn,
+                        NameAr = p.Brand.NameAr
+                    },
 
                 BrandId = p.BrandId
                 
