@@ -18,9 +18,11 @@ namespace PharmacyAPI.Services
             CancellationToken cancellationToken = default);
 
         Task<PagedResponse<OrderDto>> GetOrders(
-    int page = 1,
-    int pageSize = 20,
-    CancellationToken cancellationToken = default);
+        int page = 1,
+        int pageSize = 30,
+        int? orderId = null,
+        OrderStatus? status = null,
+        CancellationToken cancellationToken = default);
 
         Task<List<OrderDto>> GetOrdersByClient(
             int clientId,
@@ -32,6 +34,9 @@ namespace PharmacyAPI.Services
             CancellationToken cancellationToken = default);
 
         Task<bool> CancelOrder(
+            int id,
+            CancellationToken cancellationToken = default);
+        Task<bool> CompleteOrder(
             int id,
             CancellationToken cancellationToken = default);
 
@@ -552,7 +557,7 @@ namespace PharmacyAPI.Services
                         now,
 
                     Status =
-                        OrderStatus.Confirmed,
+                        OrderStatus.Pending,
 
                     TotalAmount =
                         0,
@@ -702,18 +707,78 @@ namespace PharmacyAPI.Services
         // =====================================================
         // GET ALL ORDERS
         // =====================================================
-        public async Task<PagedResponse<OrderDto>> GetOrders(int page = 1, int pageSize = 30,
-            CancellationToken cancellationToken = default) 
+
+        public async Task<PagedResponse<OrderDto>> GetOrders(
+       int page = 1,
+       int pageSize = 30,
+       int? orderId = null,
+       OrderStatus? status = null,
+       CancellationToken cancellationToken = default)
         {
             page = Math.Max(page, 1);
-            pageSize = Math.Clamp(pageSize, 1, 100); 
-            var items = await _context.Orders.AsNoTracking().OrderByDescending(o => o.OrderDate)
-                .Skip((page - 1) * pageSize).Take(pageSize + 1).Select(OrderProjection())
-                .ToListAsync(cancellationToken); 
-            var hasMore = items.Count > pageSize; 
-            if (hasMore) { items.RemoveAt(items.Count - 1); }
-            return new PagedResponse<OrderDto> 
-        { Items = items, Page = page, PageSize = pageSize, HasMore = hasMore }; }
+
+            pageSize = Math.Clamp(
+                pageSize,
+                1,
+                100);
+
+            var query =
+                _context.Orders
+                    .AsNoTracking();
+
+            // Order ID filter
+            if (orderId.HasValue)
+            {
+                query = query.Where(
+                    o => o.Id == orderId.Value
+                );
+            }
+
+            // Status filter
+            if (status.HasValue)
+            {
+                query = query.Where(
+                    o => o.Status == status.Value
+                );
+            }
+
+            var items =
+                await query
+                    .OrderByDescending(o => o.OrderDate)
+                    .ThenByDescending(o => o.Id)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize + 1)
+                    .Select(OrderProjection())
+                    .ToListAsync(cancellationToken);
+
+            var hasMore =
+                items.Count > pageSize;
+
+            if (hasMore)
+            {
+                items.RemoveAt(items.Count - 1);
+            }
+
+            return new PagedResponse<OrderDto>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                HasMore = hasMore
+            };
+        }
+        //public async Task<PagedResponse<OrderDto>> GetOrders(int page = 1, int pageSize = 30,
+        //    CancellationToken cancellationToken = default) 
+        //{
+        //    page = Math.Max(page, 1);
+        //    pageSize = Math.Clamp(pageSize, 1, 100); 
+        //    var items = await _context.Orders.AsNoTracking().OrderByDescending(o => o.OrderDate)
+        //        .Skip((page - 1) * pageSize).Take(pageSize + 1).Select(OrderProjection())
+        //        .ToListAsync(cancellationToken); 
+        //    var hasMore = items.Count > pageSize; 
+        //    if (hasMore) { items.RemoveAt(items.Count - 1); }
+        //    return new PagedResponse<OrderDto> 
+        //{ Items = items, Page = page, PageSize = pageSize, HasMore = hasMore }; }
 
 
 
@@ -832,6 +897,39 @@ namespace PharmacyAPI.Services
 
             return true;
         }
+
+
+        // =====================================================
+        // COMPLETE ORDER
+        // =====================================================
+
+        public async Task<bool> CompleteOrder(
+            int id,
+            CancellationToken cancellationToken = default)
+        {
+            // No Include(Items) needed.
+            // We only change the order status.
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(
+                    o => o.Id == id,
+                    cancellationToken);
+
+            if (order == null)
+                return false;
+
+            // Already cancelled
+            if (order.Status == OrderStatus.Confirmed)
+                return true;
+
+            order.Status = OrderStatus.Confirmed;
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
+
+            return true;
+        }
+
+
 
         // =====================================================
         // ORDER PROJECTION

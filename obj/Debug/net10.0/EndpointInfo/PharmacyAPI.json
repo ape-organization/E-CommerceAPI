@@ -606,6 +606,23 @@
               "format": "int32",
               "default": 30
             }
+          },
+          {
+            "name": "orderId",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "style": "form",
+            "schema": {
+              "$ref": "#/components/schemas/OrderStatus"
+            }
           }
         ],
         "responses": {
@@ -724,6 +741,30 @@
       }
     },
     "/api/Orders/{id}/cancel": {
+      "put": {
+        "tags": [
+          "Orders"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "style": "simple",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Orders/{id}/complete": {
       "put": {
         "tags": [
           "Orders"

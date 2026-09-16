@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyAPI.Data;
 using PharmacyAPI.Models.RequestsModels;
 using PharmacyAPI.Models.Responses;
 using PharmacyAPI.Services;
@@ -86,17 +87,39 @@ namespace PharmacyAPI.Controllers
 
         [HttpGet]
         public async Task<ActionResult<PagedResponse<OrderDto>>> GetOrders(
-     int page = 1,
-     int pageSize = 30,
-     CancellationToken cancellationToken = default)
+         int page = 1,
+         int pageSize = 30,
+         int? orderId = null,
+         OrderStatus? status = null,
+         CancellationToken cancellationToken = default)
         {
             var result = await _orderService.GetOrders(
                 page,
                 pageSize,
+                orderId,
+                status,
                 cancellationToken);
 
             return Ok(result);
         }
+
+        //   [HttpGet]
+        //   public async Task<ActionResult<PagedResponse<OrderDto>>> GetOrders(
+        //int page = 1,
+        //int pageSize = 30,
+        //CancellationToken cancellationToken = default)
+        //   {
+        //       var result = await _orderService.GetOrders(
+        //           page,
+        //           pageSize,
+        //           cancellationToken);
+
+        //       return Ok(result);
+        //   }
+
+
+
+
 
         // =====================================================
         // GET ORDER
@@ -123,6 +146,9 @@ namespace PharmacyAPI.Controllers
             return Ok(order);
         }
 
+        
+        
+        
         // =====================================================
         // GET CLIENT ORDERS
         // GET: api/orders/client/5
@@ -222,5 +248,47 @@ namespace PharmacyAPI.Controllers
                 });
             }
         }
+
+        // =====================================================
+        // CANCEL ORDER
+        // PUT: api/orders/5/cancel
+        // =====================================================
+
+        [HttpPut("{id:int}/complete")]
+        public async Task<IActionResult> CompleteOrder(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result =
+                    await _orderService.CompleteOrder(
+                        id,
+                        cancellationToken);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        message = "الطلب غير موجود"
+                    });
+                }
+
+                return Ok(new
+                {
+                    message =
+                        "تم الغاء الطلب بنجاح"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
+
     }
 }
