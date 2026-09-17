@@ -975,6 +975,64 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "PharmacyAPI.Controllers.SmsController",
+    "Method": "GetTotalCost",
+    "RelativePath": "api/Sms/cost",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.SmsController",
+    "Method": "SendMessage",
+    "RelativePath": "api/Sms/send-message",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "PharmacyAPI.Models.RequestsModels.SmsRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.SmsController",
+    "Method": "SendOtp",
+    "RelativePath": "api/Sms/send-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "PharmacyAPI.Models.RequestsModels.SmsRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "PharmacyAPI.Controllers.SmsController",
+    "Method": "VerifyOtp",
+    "RelativePath": "api/Sms/verify-otp",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "PharmacyAPI.Models.RequestsModels.SmsRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "PharmacyAPI.Controllers.SubCategoryController",
     "Method": "GetAll",
     "RelativePath": "api/SubCategory",

@@ -56,6 +56,10 @@ builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<  IBrandService, BrandService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+//http request 
+builder.Services.AddMemoryCache();
+
+builder.Services.AddHttpClient<SmsIntegrationService>();
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

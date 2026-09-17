@@ -845,7 +845,7 @@ namespace PharmacyAPI.Services
 
                 product.NameEn = nameEn;
                 product.NameAr = dto.NameAr.Trim();
-
+                
                 product.DescriptionEn =
                     string.IsNullOrWhiteSpace(dto.DescriptionEn)
                         ? null
@@ -881,13 +881,16 @@ namespace PharmacyAPI.Services
                 await _context.SaveChangesAsync(cancellationToken);
 
                 // Delete old image only after successful DB update
-                if (!string.IsNullOrWhiteSpace(oldImageUrl) &&
+                if (dto.Image != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(oldImageUrl) &&
                     !string.Equals(
                         oldImageUrl,
                         newImageUrl,
                         StringComparison.OrdinalIgnoreCase))
-                {
-                    DeleteImage(oldImageUrl);
+                    {
+                        DeleteImage(oldImageUrl);
+                    }
                 }
 
                 return true;

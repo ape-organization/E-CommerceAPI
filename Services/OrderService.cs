@@ -52,10 +52,12 @@ namespace PharmacyAPI.Services
     public class OrderService : IOrderService
     {
         private readonly PharmacyDbContext _context;
+        private readonly SmsIntegrationService _smsService;
 
-        public OrderService(PharmacyDbContext context)
+        public OrderService(PharmacyDbContext context, SmsIntegrationService smsService)
         {
             _context = context;
+            _smsService = smsService;
         }
         public async Task<DashboardStatsDto> GetCurrentMonthStats(
        CancellationToken cancellationToken = default)
@@ -335,7 +337,14 @@ namespace PharmacyAPI.Services
         //    return order;
         //}
 
+        public async Task<bool> SendMsg(string phone,string msg)
+            {
 
+            return await _smsService.SendMessageAsync(
+                phone,
+                msg,
+                CancellationToken.None) != null;
+        }
 
         public async Task<Order> CreateOrder(
     CreateOrderDto dto,
@@ -682,7 +691,7 @@ namespace PharmacyAPI.Services
                 await _context.SaveChangesAsync(
                     cancellationToken);
 
-
+   SendMsg(client.PhoneNumber,"order sent");
                 // =================================================
                 // COMMIT
                 // =================================================
@@ -916,6 +925,10 @@ namespace PharmacyAPI.Services
 
             if (order == null)
                 return false;
+            var client=await _context.Clients
+                .FirstOrDefaultAsync(
+                    c => c.Id == order.ClientId,
+                    cancellationToken);
 
             // Already cancelled
             if (order.Status == OrderStatus.Confirmed)
@@ -925,6 +938,8 @@ namespace PharmacyAPI.Services
 
             await _context.SaveChangesAsync(
                 cancellationToken);
+
+            SendMsg(client.PhoneNumber, "order confirmed");
 
             return true;
         }
