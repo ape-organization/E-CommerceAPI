@@ -17,16 +17,27 @@ namespace PharmacyAPI.Controllers
         [HttpPost("verify-otp")]
         public IActionResult VerifyOtp(SmsRequest request)
         {
-            var result = _smsService.VerifyOtp(
-                request.PhoneNumber,
-                request.Otp);
-
-            if (!result.Success)
+            try
             {
-                return BadRequest(result);
-            }
+                var result = _smsService.VerifyOtp(
+                    request.PhoneNumber,
+                    request.Otp);
 
-            return Ok(result);
+                if (!result.Success)
+                {
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
 
         // ============================================================

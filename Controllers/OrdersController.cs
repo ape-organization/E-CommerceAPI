@@ -23,10 +23,21 @@ namespace PharmacyAPI.Controllers
         public async Task<ActionResult<DashboardStatsDto>> GetCurrentMonthStats(
      CancellationToken cancellationToken)
         {
-            var result = await _orderService.GetCurrentMonthStats(
-                cancellationToken);
+            try
+            {
+                var result = await _orderService.GetCurrentMonthStats(
+                    cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء جلب إحصائيات الشهر الحالي.",
+                    error = ex.Message
+                });
+            }
         }
 
 
@@ -34,10 +45,21 @@ namespace PharmacyAPI.Controllers
         public async Task<ActionResult<DashboardStatsDto>> GetTotalStats(
             CancellationToken cancellationToken)
         {
-            var result = await _orderService.GetTotalStats(
-                cancellationToken);
+            try
+            {
+                var result = await _orderService.GetTotalStats(
+                    cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء جلب الإحصائيات الإجمالية.",
+                    error = ex.Message
+                });
+            }
         }
         // =====================================================
         // CREATE ORDER
@@ -88,19 +110,30 @@ namespace PharmacyAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<PagedResponse<OrderDto>>> GetOrders(
          int page = 1,
-         int pageSize = 30,
+         int pageSize = 100,
          int? orderId = null,
          OrderStatus? status = null,
          CancellationToken cancellationToken = default)
         {
-            var result = await _orderService.GetOrders(
-                page,
-                pageSize,
-                orderId,
-                status,
-                cancellationToken);
+            try
+            {
+                var result = await _orderService.GetOrders(
+                    page,
+                    pageSize,
+                    orderId,
+                    status,
+                    cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء جلب الطلبات.",
+                    error = ex.Message
+                });
+            }
         }
 
         //   [HttpGet]
@@ -131,19 +164,30 @@ namespace PharmacyAPI.Controllers
             int id,
             CancellationToken cancellationToken)
         {
-            var order = await _orderService.GetOrder(
-                id,
-                cancellationToken);
-
-            if (order == null)
+            try
             {
-                return NotFound(new
+                var order = await _orderService.GetOrder(
+                    id,
+                    cancellationToken);
+
+                if (order == null)
                 {
-                    message = "الطلب غير موجود"
+                    return NotFound(new
+                    {
+                        message = "الطلب غير موجود"
+                    });
+                }
+
+                return Ok(order);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء جلب الطلب.",
+                    error = ex.Message
                 });
             }
-
-            return Ok(order);
         }
 
         
@@ -159,12 +203,24 @@ namespace PharmacyAPI.Controllers
             int clientId,
             CancellationToken cancellationToken)
         {
-            var orders =
-                await _orderService.GetOrdersByClient(
-                    clientId,
-                    cancellationToken);
+            try
+            {
+                var orders =
+                    await _orderService.GetOrdersByClient(
+                        clientId,
+                        cancellationToken);
 
-            return Ok(orders);
+                return Ok(orders);
+            }
+
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء جلب طلبات العميل.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =====================================================

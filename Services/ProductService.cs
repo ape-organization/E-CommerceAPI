@@ -59,6 +59,9 @@ namespace PharmacyAPI.Services
     CancellationToken cancellationToken = default);
         Task<List<SubProductResponseDto>> getProductsbySubCategory(int subID, int productID,
             CancellationToken cancellationToken = default);
+        Task<List<ProductResponseDto>> GetAdminProducts(
+
+     CancellationToken cancellationToken = default);
     }
 
 
@@ -94,7 +97,9 @@ namespace PharmacyAPI.Services
 
             var products = _context.Products
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted &&p.Id!=productID && p.SubCategories.Any(sc => sc.Id == subID)).Take(30)
+                .Where(p => !p.IsDeleted &&p.Id!=productID && p.SubCategories.Any(sc => sc.Id == subID))
+                .OrderByDescending(p=>p.CreatedAt)
+                .Take(30)
                 .Select(MapProduct())
                 .ToList();
 
@@ -115,7 +120,9 @@ namespace PharmacyAPI.Services
             var products = _context.Products
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted && p.CreatedAt >= fromDate)
+                .OrderByDescending(p=>p.CreatedAt)
                   .Take(50)
+
                 .Select(MapProduct())
                 .ToList();
 
@@ -210,7 +217,7 @@ namespace PharmacyAPI.Services
             // =================================================
 
             var products = await query
-                .OrderBy(p => p.Id)
+                .OrderByDescending(p => p.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(MapAllProduct())
@@ -230,126 +237,30 @@ namespace PharmacyAPI.Services
                 HasMore = page < totalPages
             };
         }
-      
-        
-        
-        
-        //public async Task<PagedResponse<ProductResponseDto>> GetProducts(
-        //    int page = 1,
-        //    int? categoryId = null,
-        //    int? subCategoryId = null,
-        //    int? brandId = null,
-        //    bool? offers = null,
-        //    CancellationToken cancellationToken = default)
-        //{
-        //    page = Math.Max(page, 1);
-
-        //    const int pageSize = 50;
-
-        //    IQueryable<Product> query = _context.Products
-        //        .AsNoTracking()
-        //        .Where(p => !p.IsDeleted);
-
-        //    // =================================================
-        //    // FILTERS
-        //    // =================================================
-
-        //    if (categoryId.HasValue)
-        //    {
-        //        query = query.Where(p =>
-        //            p.SubCategories.Any(sc =>
-        //                !sc.IsDeleted &&
-        //                sc.CategoryId == categoryId.Value));
-        //    }
-
-        //    if (subCategoryId.HasValue)
-        //    {
-        //        query = query.Where(p =>
-        //            p.SubCategories.Any(sc =>
-        //                !sc.IsDeleted &&
-        //                sc.Id == subCategoryId.Value));
-        //    }
-
-        //    if (brandId.HasValue)
-        //    {
-        //        query = query.Where(p =>
-        //            p.BrandId == brandId.Value);
-        //    }
-
-        //    if (offers == true)
-        //    {
-        //        query = query.Where(p =>
-        //            p.DiscountPercentage > 0);
-        //    }
-
-        //    // =================================================
-        //    // CHECK IF FILTERING IS ACTIVE
-        //    // =================================================
-
-        //    bool hasFilters =
-        //        categoryId.HasValue ||
-        //        subCategoryId.HasValue ||
-        //        brandId.HasValue ||
-        //        offers == true;
-
-        //    // =================================================
-        //    // FILTERED REQUEST
-        //    //
-        //    // Return ALL matching products.
-        //    // Angular can then filter locally.
-        //    // =================================================
-
-        //    if (hasFilters)
-        //    {
-        //        var filteredProducts = await query
-        //            .OrderBy(p => p.Id)
-        //            .Select(MapProduct())
-        //            .ToListAsync(cancellationToken);
-
-        //        return new PagedResponse<ProductResponseDto>
-        //        {
-        //            Items = filteredProducts,
-        //            TotalCount = filteredProducts.Count,
-        //            Page = 1,
-        //            PageSize = filteredProducts.Count,
-        //            TotalPages = filteredProducts.Count > 0 ? 1 : 0,
-        //            HasMore = false
-        //        };
-        //    }
-
-        //    // =================================================
-        //    // NORMAL PAGINATION
-        //    // =================================================
-
-        //    var totalCount = await query.CountAsync(cancellationToken);
-
-        //    var totalPages = totalCount == 0
-        //        ? 0
-        //        : (int)Math.Ceiling(totalCount / (double)pageSize);
-
-        //    var products = await query
-        //        .OrderBy(p => p.Id)
-        //        .Skip((page - 1) * pageSize)
-        //        .Take(pageSize)
-        //        .Select(MapProduct())
-        //        .ToListAsync(cancellationToken);
-
-        //    return new PagedResponse<ProductResponseDto>
-        //    {
-        //        Items = products,
-        //        TotalCount = totalCount,
-        //        Page = page,
-        //        PageSize = pageSize,
-        //        TotalPages = totalPages,
-        //        HasMore = page < totalPages
-        //    };
-        //}
 
 
 
-        // =====================================================
-        // GET PRODUCT BY ID
-        // =====================================================
+        public async Task<List<ProductResponseDto>> GetAdminProducts(
+  
+     CancellationToken cancellationToken = default)
+        {
+         
+
+            IQueryable<Product> query = _context.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted);
+
+                 var products =  query
+                .OrderByDescending(p => p.CreatedAt)
+             
+                .Select(MapAllProduct())
+                .ToList();
+
+          
+
+            return products;
+        }
+
 
         public async Task<ProductResponseDto?> GetProduct(
             int id,
@@ -385,7 +296,7 @@ namespace PharmacyAPI.Services
                         EF.Functions.Like(p.NameEn, $"%{name}%") ||
                         EF.Functions.Like(p.NameAr, $"%{name}%")
                     ))
-           
+           .OrderByDescending(p => p.CreatedAt)
                 .Select(MapAllProduct()).Take(50)
                 .ToListAsync(cancellationToken);
         }
@@ -415,6 +326,7 @@ namespace PharmacyAPI.Services
                 .Where(p =>
                     ids.Contains(p.Id) &&
                     !p.IsDeleted)
+                .OrderByDescending(p => p.CreatedAt)
                 .Select(MapAllProduct())
                 .ToListAsync(cancellationToken);
         }
@@ -431,7 +343,7 @@ namespace PharmacyAPI.Services
                 .Where(p =>
                     !p.IsDeleted &&
                     p.DiscountPercentage > 0)
-              
+              .OrderByDescending(p => p.CreatedAt)
                 .Select(MapProduct())
                 .ToList();
         }
@@ -484,6 +396,7 @@ namespace PharmacyAPI.Services
                     productIds.Contains(p.Id) &&
                     !p.IsDeleted &&
                     p.IsInStock)
+                .OrderByDescending(p => p.CreatedAt)
                 .Select(MapProduct())
                 .ToListAsync(cancellationToken);
 

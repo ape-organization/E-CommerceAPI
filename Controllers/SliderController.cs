@@ -32,10 +32,19 @@ namespace PharmacyAPI.Controllers
             GetSliders(
                 CancellationToken cancellationToken)
         {
-            var categories = await _sliderService
-                .GetSliders(cancellationToken);
+            try
+            {
+                var categories = await _sliderService
+                    .GetSliders(cancellationToken);
 
-            return Ok(categories);
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"Internal server error: {ex.Message}");
+            }
         }
 
 

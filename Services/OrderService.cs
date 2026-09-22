@@ -19,7 +19,7 @@ namespace PharmacyAPI.Services
 
         Task<PagedResponse<OrderDto>> GetOrders(
         int page = 1,
-        int pageSize = 30,
+        int pageSize = 100,
         int? orderId = null,
         OrderStatus? status = null,
         CancellationToken cancellationToken = default);
@@ -719,7 +719,7 @@ namespace PharmacyAPI.Services
 
         public async Task<PagedResponse<OrderDto>> GetOrders(
        int page = 1,
-       int pageSize = 30,
+       int pageSize = 100,
        int? orderId = null,
        OrderStatus? status = null,
        CancellationToken cancellationToken = default)

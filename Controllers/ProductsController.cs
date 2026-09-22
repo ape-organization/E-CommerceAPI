@@ -27,12 +27,18 @@ namespace PharmacyAPI.Controllers
 
             CancellationToken cancellationToken = default)
         {
+            try
+            {
 
+                var result =
+                    await _productService.getProductsbySubCategory(subID, productId, cancellationToken);
 
-            var result =
-                await _productService.getProductsbySubCategory(subID, productId,cancellationToken);
-
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
         //===========================================
         //new arrival 
@@ -43,12 +49,18 @@ namespace PharmacyAPI.Controllers
 
             CancellationToken cancellationToken = default)
         {
+            try
+            {
 
+                var result =
+                    await _productService.GetNewArrivalProducts(cancellationToken);
 
-            var result =
-                await _productService.GetNewArrivalProducts(cancellationToken);
-
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
         //=================================================
         // get best seller product 
@@ -59,13 +71,19 @@ namespace PharmacyAPI.Controllers
     [FromQuery] int count = 10,
     CancellationToken cancellationToken = default)
         {
-            var products = await _productService.GetBestSellerProducts(
-                count,
-                cancellationToken);
+            try
+            {
+                var products = await _productService.GetBestSellerProducts(
+                    count,
+                    cancellationToken);
 
-            return Ok(products);
+                return Ok(products);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
-
         // =====================================================
         // GET PRODUCTS
         // GET: api/products
@@ -81,17 +99,45 @@ namespace PharmacyAPI.Controllers
             [FromQuery] bool? offers = null,
             CancellationToken cancellationToken = default)
         {
-            var result = await _productService.GetProducts(
-                page,
-                categoryId,
-                subCategoryId,
-                brandId,
-                offers,
-                cancellationToken);
+            try
+            {
+                var result = await _productService.GetProducts(
+                    page,
+                    categoryId,
+                    subCategoryId,
+                    brandId,
+                    offers,
+                    cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
 
+        // =====================================================
+        // GET ADMIN PRODUCTS
+        // GET: api/products
+        // =====================================================
+
+        [HttpGet("admin")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PagedResponse<ProductResponseDto>>> GetAdminProducts(
+         CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _productService.GetAdminProducts(cancellationToken);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
+        }
 
         // =====================================================
         // GET CART PRODUCTS
@@ -104,18 +150,25 @@ namespace PharmacyAPI.Controllers
             [FromBody] GetProductsByIdsRequest request,
             CancellationToken cancellationToken)
         {
-            if (request?.ProductIds is null ||
-                request.ProductIds.Count == 0)
+            try
             {
-                return Ok(new List<ProductResponseDto>());
+                if (request?.ProductIds is null ||
+                    request.ProductIds.Count == 0)
+                {
+                    return Ok(new List<ProductResponseDto>());
+                }
+
+                var products =
+                    await _productService.GetProductsByIds(
+                        request.ProductIds,
+                        cancellationToken);
+
+                return Ok(products);
             }
-
-            var products =
-                await _productService.GetProductsByIds(
-                    request.ProductIds,
-                    cancellationToken);
-
-            return Ok(products);
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
 
 
@@ -129,11 +182,18 @@ namespace PharmacyAPI.Controllers
         public async Task<ActionResult<List<ProductResponseDto>>> GetDiscountedProducts(
             CancellationToken cancellationToken)
         {
-            var products =
-                await _productService.GetDiscountedProducts(
-                    cancellationToken);
+            try
+            {
+                var products =
+                    await _productService.GetDiscountedProducts(
+                        cancellationToken);
 
-            return Ok(products);
+                return Ok(products);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
 
 
@@ -148,20 +208,27 @@ namespace PharmacyAPI.Controllers
             int id,
             CancellationToken cancellationToken)
         {
-            var product =
-                await _productService.GetProduct(
-                    id,
-                    cancellationToken);
-
-            if (product is null)
+            try
             {
-                return NotFound(new
-                {
-                    message = "المنتج غير موجود"
-                });
-            }
+                var product =
+                    await _productService.GetProduct(
+                        id,
+                        cancellationToken);
 
-            return Ok(product);
+                if (product is null)
+                {
+                    return NotFound(new
+                    {
+                        message = "المنتج غير موجود"
+                    });
+                }
+
+                return Ok(product);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
 
 
@@ -319,20 +386,27 @@ namespace PharmacyAPI.Controllers
             [FromQuery] string name,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            try
             {
-                return BadRequest(new
+                if (string.IsNullOrWhiteSpace(name))
                 {
-                    message = "اسم المنتج مطلوب"
-                });
+                    return BadRequest(new
+                    {
+                        message = "اسم المنتج مطلوب"
+                    });
+                }
+
+                var products =
+                    await _productService.GetProductsByName(
+                        name,
+                        cancellationToken);
+
+                return Ok(products);
             }
-
-            var products =
-                await _productService.GetProductsByName(
-                    name,
-                    cancellationToken);
-
-            return Ok(products);
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
 
 
@@ -346,23 +420,30 @@ namespace PharmacyAPI.Controllers
             [FromQuery] string name,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            try
             {
-                return BadRequest(new
+                if (string.IsNullOrWhiteSpace(name))
                 {
-                    message = "اسم المنتج مطلوب"
+                    return BadRequest(new
+                    {
+                        message = "اسم المنتج مطلوب"
+                    });
+                }
+
+                var exists =
+                    await _productService.CheckProductExists(
+                        name,
+                        cancellationToken);
+
+                return Ok(new
+                {
+                    exists
                 });
             }
-
-            var exists =
-                await _productService.CheckProductExists(
-                    name,
-                    cancellationToken);
-
-            return Ok(new
+            catch (Exception ex)
             {
-                exists
-            });
+                return StatusCode(500, new { message = "An error occurred while processing your request.", details = ex.Message });
+            }
         }
     }
 }

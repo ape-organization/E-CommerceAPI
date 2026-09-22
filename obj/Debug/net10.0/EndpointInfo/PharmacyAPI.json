@@ -604,7 +604,7 @@
             "schema": {
               "type": "integer",
               "format": "int32",
-              "default": 30
+              "default": 100
             }
           },
           {
@@ -1108,6 +1108,35 @@
         "responses": {
           "200": {
             "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Products/admin": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDtoPagedResponse"
+                }
+              }
+            }
           }
         }
       }

@@ -3,16 +3,12 @@
   "WorkspaceRootPath": "D:\\GitHub\\cosmeticsAPI\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\services\\smsintegrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:services\\smsintegrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\controllers\\smscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:controllers\\smscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\models\\requestsmodels\\smscostresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:models\\requestsmodels\\smscostresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,7 +18,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -50,15 +46,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "SmsCostResponse.cs",
-              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Models\\RequestsModels\\SmsCostResponse.cs",
-              "RelativeDocumentMoniker": "Models\\RequestsModels\\SmsCostResponse.cs",
-              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Models\\RequestsModels\\SmsCostResponse.cs",
-              "RelativeToolTip": "Models\\RequestsModels\\SmsCostResponse.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAMAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-17T14:25:16.547Z",
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-09-22T13:40:11.412Z",
               "EditorCaption": ""
             },
             {
@@ -69,22 +65,9 @@
               "RelativeDocumentMoniker": "Controllers\\SmsController.cs",
               "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Controllers\\SmsController.cs",
               "RelativeToolTip": "Controllers\\SmsController.cs",
-              "ViewState": "AgIAAGIAAAAAAAAAAAAqwGgAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAAADYAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-17T09:14:18.332Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "SmsIntegrationService.cs",
-              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Services\\SmsIntegrationService.cs",
-              "RelativeDocumentMoniker": "Services\\SmsIntegrationService.cs",
-              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Services\\SmsIntegrationService.cs*",
-              "RelativeToolTip": "Services\\SmsIntegrationService.cs*",
-              "ViewState": "AgIAAIgAAAAAAAAAAAAAANsAAAAoAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-17T08:55:19.742Z",
+              "WhenOpened": "2026-09-22T13:36:10.26Z",
               "EditorCaption": ""
             }
           ]

@@ -1,3 +1,4 @@
+using Azure.Core;
 using Google.Authenticator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -44,51 +45,62 @@ namespace PharmacyAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login(UserDto userForAuthentication)
         {
-            var user = await userManager.FindByEmailAsync(userForAuthentication.Email);
-
-            if (user == null ||
-                !await userManager.CheckPasswordAsync(user, userForAuthentication.Password) ||
-                !user.IsActive)
+            try
             {
+                var user = await userManager.FindByEmailAsync(userForAuthentication.Email);
+
+                if (user == null ||
+                    !await userManager.CheckPasswordAsync(user, userForAuthentication.Password) ||
+                    !user.IsActive)
+                {
+                    return Ok(new
+                    {
+                        IsAuthSuccessful = false,
+                        ErrorMessage = "Invalid Authentication"
+                    });
+                }
+
+                // 🔹 Get claims INCLUDING roles
+                var claims = await _jwtHandler.GetClaims(user);
+
+                // 🔹 Create signing credentials
+                var signingCredentials = _jwtHandler.GetSigningCredentials();
+
+                // 🔹 Generate token
+                var tokenOptions = _jwtHandler.GenerateTokenOptions(signingCredentials, claims);
+                var accessToken = new JwtSecurityTokenHandler().WriteToken(tokenOptions);
+
+                // 🔹 Generate refresh token
+                var refreshToken = GenerateRefreshToken();
+                int.TryParse(_configuration["JWTSettings:RefreshTokenValidityInDays"],
+                    out int refreshTokenValidityInDays);
+
+                user.RefreshToken = refreshToken;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(refreshTokenValidityInDays);
+
+                await userManager.UpdateAsync(user);
+
                 return Ok(new
                 {
-                    IsAuthSuccessful = false,
-                    ErrorMessage = "Invalid Authentication"
+                    IsAuthSuccessful = true,
+                    Token = accessToken,
+                    RefreshToken = refreshToken
                 });
             }
-
-            // 🔹 Get claims INCLUDING roles
-            var claims = await _jwtHandler.GetClaims(user);
-
-            // 🔹 Create signing credentials
-            var signingCredentials = _jwtHandler.GetSigningCredentials();
-
-            // 🔹 Generate token
-            var tokenOptions = _jwtHandler.GenerateTokenOptions(signingCredentials, claims);
-            var accessToken = new JwtSecurityTokenHandler().WriteToken(tokenOptions);
-
-            // 🔹 Generate refresh token
-            var refreshToken = GenerateRefreshToken();
-            int.TryParse(_configuration["JWTSettings:RefreshTokenValidityInDays"],
-                out int refreshTokenValidityInDays);
-
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(refreshTokenValidityInDays);
-
-            await userManager.UpdateAsync(user);
-
-            return Ok(new
+            catch (Exception ex)
             {
-                IsAuthSuccessful = true,
-                Token = accessToken,
-                RefreshToken = refreshToken
-            });
+                return BadRequest(new
+                {
+                    IsAuthSuccessful = false
+                });
+            }
         }
         [HttpPost("refresh")]
         [AllowAnonymous]
         public async Task<IActionResult> Refresh(
        [FromBody] Token tokenRequest)
         {
+            
             if (tokenRequest == null)
             {
                 return BadRequest("Invalid request");
@@ -227,7 +239,11 @@ namespace PharmacyAPI.Controllers
         //need edit to get user role too
         public async Task<ActionResult<IEnumerable<ApplicationUser>>> GetUsers()
         {
-            return await _context.Users.Where(user => user.IsActive == true).ToListAsync();
+            try
+            {
+                return await _context.Users.Where(user => user.IsActive == true).ToListAsync();
+            }
+             catch { return Unauthorized(); }
         }
 
         [HttpGet("{id}")]
@@ -323,30 +339,47 @@ namespace PharmacyAPI.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateUser(UpdateUserDto updateUserDto)
         {
-            var user = await userManager.FindByEmailAsync( updateUserDto.Email);
-            if (user == null) return NotFound();
-
-            user.Name = updateUserDto.name;
-            user.Email = updateUserDto.Email;
-
-
-            await userManager.UpdateAsync(user);
-            return Ok(new
+            try
             {
-                Status = true,
-                Message = user.Id,
-            });
+                var user = await userManager.FindByEmailAsync(updateUserDto.Email);
+                if (user == null) return NotFound();
+
+                user.Name = updateUserDto.name;
+                user.Email = updateUserDto.Email;
+
+
+                await userManager.UpdateAsync(user);
+                return Ok(new
+                {
+                    Status = true,
+                    Message = user.Id,
+                });
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new
+                {
+                    Status = false
+                });
+            }
         }
 
         [HttpPost()]
         [Authorize]
         public async Task<IActionResult> DeleteUser(UpdateUserDto data)
         {
-            var user = await userManager.FindByIdAsync(data.Id.ToString());
-            if (user == null) return NotFound();
-            user.IsActive=false;
-            await userManager.UpdateAsync(user);
-            return NoContent();
+            try
+            {
+                var user = await userManager.FindByIdAsync(data.Id.ToString());
+                if (user == null) return NotFound();
+                user.IsActive = false;
+                await userManager.UpdateAsync(user);
+                return NoContent();
+            }
+            catch(Exception e)
+            {
+                return BadRequest();
+            }
         }
 
         public static string GenerateRefreshToken()

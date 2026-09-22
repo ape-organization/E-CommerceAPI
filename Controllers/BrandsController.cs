@@ -31,10 +31,19 @@ namespace PharmacyAPI.Controllers
             GetBrands(
                 CancellationToken cancellationToken)
         {
-            var brands = await _brandService
-                .GetBrands(cancellationToken);
+            try
+            {
+                var brands = await _brandService
+                    .GetBrands(cancellationToken);
 
-            return Ok(brands);
+                return Ok(brands);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"حدث خطأ أثناء استرجاع العلامات التجارية: {ex.Message}");
+            }
         }
 
 
@@ -48,19 +57,28 @@ namespace PharmacyAPI.Controllers
                 int id,
                 CancellationToken cancellationToken)
         {
-            var brand = await _brandService
-                .GetBrand(
-                    id,
-                    cancellationToken);
-
-
-            if (brand is null)
+            try
             {
-                return NotFound();
+                var brand = await _brandService
+                    .GetBrand(
+                        id,
+                        cancellationToken);
+
+
+                if (brand is null)
+                {
+                    return NotFound();
+                }
+
+
+                return Ok(brand);
             }
-
-
-            return Ok(brand);
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"حدث خطأ أثناء استرجاع العلامة التجارية: {ex.Message}");
+            }
         }
 
 
@@ -75,6 +93,7 @@ namespace PharmacyAPI.Controllers
                 [FromForm] BrandRequest request,
                 CancellationToken cancellationToken)
         {
+           
             if (request is null)
             {
                 return BadRequest(
@@ -174,19 +193,28 @@ namespace PharmacyAPI.Controllers
                 int id,
                 CancellationToken cancellationToken)
         {
-            var result = await _brandService
-                .DeleteBrand(
-                    id,
-                    cancellationToken);
-
-
-            if (!result)
+            try
             {
-                return NotFound();
+                var result = await _brandService
+                    .DeleteBrand(
+                        id,
+                        cancellationToken);
+
+
+                if (!result)
+                {
+                    return NotFound();
+                }
+
+
+                return NoContent();
             }
-
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"حدث خطأ أثناء حذف العلامة التجارية: {ex.Message}");
+            }
         }
     }
 }

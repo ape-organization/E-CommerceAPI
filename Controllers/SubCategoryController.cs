@@ -29,10 +29,21 @@ namespace PharmacyAPI.Controllers
         public async Task<IActionResult> GetAll(
             CancellationToken cancellationToken)
         {
-            var result = await _service
-                .GetAllAsync(cancellationToken);
+            try
+            {
+                var result = await _service
+                    .GetAllAsync(cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء معالجة الطلب",
+                    error = ex.Message
+                });
+            }   
         }
 
 
@@ -45,22 +56,33 @@ namespace PharmacyAPI.Controllers
             int id,
             CancellationToken cancellationToken)
         {
-            var result = await _service
-                .GetByIdAsync(
-                    id,
-                    cancellationToken);
-
-
-            if (result is null)
+            try
             {
-                return NotFound(new
+                var result = await _service
+                    .GetByIdAsync(
+                        id,
+                        cancellationToken);
+
+
+                if (result is null)
                 {
-                    message = "الفئات الفرعيه غير موجوده"
+                    return NotFound(new
+                    {
+                        message = "الفئات الفرعيه غير موجوده"
+                    });
+                }
+
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء معالجة الطلب",
+                    error = ex.Message
                 });
             }
-
-
-            return Ok(result);
         }
 
 
@@ -73,12 +95,23 @@ namespace PharmacyAPI.Controllers
             int categoryId,
             CancellationToken cancellationToken)
         {
-            var result = await _service
-                .GetByCategoryIdAsync(
-                    categoryId,
-                    cancellationToken);
+            try
+            {
+                var result = await _service
+                    .GetByCategoryIdAsync(
+                        categoryId,
+                        cancellationToken);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء معالجة الطلب",
+                    error = ex.Message
+                });
+            }
         }
 
 
@@ -218,22 +251,32 @@ namespace PharmacyAPI.Controllers
             int id,
             CancellationToken cancellationToken)
         {
-            var result = await _service
-                .DeleteAsync(
-                    id,
-                    cancellationToken);
-
-
-            if (!result)
+            try
             {
-                return NotFound(new
+                var result = await _service
+                    .DeleteAsync(
+                        id,
+                        cancellationToken);
+
+
+                if (!result)
                 {
-                    message = "الفئه الفرعيه غير موجوده"
+                    return NotFound(new
+                    {
+                        message = "الفئه الفرعيه غير موجوده"
+                    });
+                }
+
+
+                return NoContent();
+            }
+            catch(Exception ex)
+            {
+                return Conflict(new
+                {
+                    message = ex.Message
                 });
             }
-
-
-            return NoContent();
         }
 
 
@@ -290,24 +333,34 @@ namespace PharmacyAPI.Controllers
             int productId,
             CancellationToken cancellationToken)
         {
-            var result = await _service
-                .RemoveProductAsync(
-                    subCategoryId,
-                    productId,
-                    cancellationToken);
-
-
-            if (!result)
+            try
             {
-                return NotFound(new
+                var result = await _service
+                    .RemoveProductAsync(
+                        subCategoryId,
+                        productId,
+                        cancellationToken);
+
+
+                if (!result)
                 {
-                    message =
-                        "حدث خطا"
+                    return NotFound(new
+                    {
+                        message =
+                            "حدث خطا"
+                    });
+                }
+
+
+                return NoContent();
+            }
+            catch(Exception ex)
+            {
+                return Conflict(new
+                {
+                    message = ex.Message
                 });
             }
-
-
-            return NoContent();
         }
 
 

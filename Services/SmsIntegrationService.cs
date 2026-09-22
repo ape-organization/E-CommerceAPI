@@ -56,8 +56,8 @@ namespace PharmacyAPI.Services
             var request = new
             {
                 phoneNumber,
-                message = $"Your verification code is {otp}",
-                senderId = _smsSenderId,
+                message = $"Pinky Aura\nOTP: رمز التحقق {otp}",
+            senderId = _smsSenderId,
                 senderName = _smsSenderName
             };
 

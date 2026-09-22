@@ -31,10 +31,19 @@ namespace PharmacyAPI.Controllers
             GetCategoriesForMenu(
                 CancellationToken cancellationToken)
         {
-            var categories = await _categoryService
-                .GetCategoriesForMenu(cancellationToken);
+            try
+            {
+                var categories = await _categoryService
+                    .GetCategoriesForMenu(cancellationToken);
 
-            return Ok(categories);
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"حدث خطأ أثناء جلب بيانات الفئات: {ex.Message}");
+            }
         }
 
 
@@ -48,12 +57,20 @@ namespace PharmacyAPI.Controllers
             GetCategories(
                 CancellationToken cancellationToken)
         {
-            var categories = await _categoryService
-                .GetCategories(cancellationToken);
+            try
+            {
+                var categories = await _categoryService
+                    .GetCategories(cancellationToken);
 
-            return Ok(categories);
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"حدث خطأ أثناء جلب بيانات الفئات: {ex.Message}");
+            }
         }
-
 
         // =====================================================
         // GET BY ID
@@ -65,17 +82,26 @@ namespace PharmacyAPI.Controllers
                 int id,
                 CancellationToken cancellationToken)
         {
-            var category = await _categoryService
-                .GetCategory(
-                    id,
-                    cancellationToken);
+            try
+            {
+                var category = await _categoryService
+                    .GetCategory(
+                        id,
+                        cancellationToken);
 
 
-            if (category is null)
-                return NotFound();
+                if (category is null)
+                    return NotFound();
 
 
-            return Ok(category);
+                return Ok(category);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    500,
+                    $"حدث خطأ أثناء جلب بيانات الفئه: {ex.Message}");
+            }
         }
 
 
