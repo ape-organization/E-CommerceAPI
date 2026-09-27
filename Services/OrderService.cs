@@ -939,7 +939,7 @@ namespace PharmacyAPI.Services
             await _context.SaveChangesAsync(
                 cancellationToken);
 
-            SendMsg(client.PhoneNumber, " شكرا لتواصلكم مع Pinky Aura تم تاكيد طلبكم ");
+            SendMsg(client.PhoneNumber, " شكرا لتواصلكم مع E-Commerce تم تاكيد طلبكم ");
 
             return true;
         }

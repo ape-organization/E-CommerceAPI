@@ -56,7 +56,7 @@ namespace PharmacyAPI.Services
             var request = new
             {
                 phoneNumber,
-                message = $"Pinky Aura\nOTP: رمز التحقق {otp}",
+                message = $"E-commerce\nOTP: رمز التحقق {otp}",
             senderId = _smsSenderId,
                 senderName = _smsSenderName
             };

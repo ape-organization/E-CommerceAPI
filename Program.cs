@@ -74,7 +74,7 @@ builder.Services.AddCors(opt =>
                 "http://localhost:5000",
                 "http://localhost:5555",
                 "https://adminpinkyauradev.ape-org.com",
-                "https://pinkyauradev.ape-org.com",
+                "https://e-commercedev.ape-org.com",
                 "https://pinkyaura.ape-org.com",
                 "https://adminpinkyaura.ape-org.com"
             )
