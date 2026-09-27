@@ -691,7 +691,7 @@ namespace PharmacyAPI.Services
                 await _context.SaveChangesAsync(
                     cancellationToken);
 
-   SendMsg(client.PhoneNumber,"order sent");
+ //  SendMsg(client.PhoneNumber,"order sent");
                 // =================================================
                 // COMMIT
                 // =================================================
@@ -939,7 +939,7 @@ namespace PharmacyAPI.Services
             await _context.SaveChangesAsync(
                 cancellationToken);
 
-            SendMsg(client.PhoneNumber, "order confirmed");
+            SendMsg(client.PhoneNumber, " شكرا لتواصلكم مع Pinky Aura تم تاكيد طلبكم ");
 
             return true;
         }

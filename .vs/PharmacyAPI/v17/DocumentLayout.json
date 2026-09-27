@@ -7,8 +7,16 @@
       "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\services\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:services\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\controllers\\smscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:controllers\\smscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|d:\\github\\cosmeticsapi\\services\\smsintegrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{90056D33-2D23-4498-EF1B-DCB1B40B82FD}|PharmacyAPI.csproj|solutionrelative:services\\smsintegrationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,7 +26,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 8,
           "Children": [
             {
               "$type": "Bookmark",
@@ -46,6 +54,31 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "OrderService.cs",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Services\\OrderService.cs",
+              "RelativeDocumentMoniker": "Services\\OrderService.cs",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Services\\OrderService.cs",
+              "RelativeToolTip": "Services\\OrderService.cs",
+              "ViewState": "AgIAAJQDAAAAAAAAAAAkwJ0DAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-27T10:02:02.345Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "SmsIntegrationService.cs",
+              "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Services\\SmsIntegrationService.cs",
+              "RelativeDocumentMoniker": "Services\\SmsIntegrationService.cs",
+              "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Services\\SmsIntegrationService.cs",
+              "RelativeToolTip": "Services\\SmsIntegrationService.cs",
+              "ViewState": "AgIAAGYAAAAAAAAAAAAkwHkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-27T09:56:48.895Z"
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\appsettings.json",
@@ -59,16 +92,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "SmsController.cs",
               "DocumentMoniker": "D:\\GitHub\\cosmeticsAPI\\Controllers\\SmsController.cs",
               "RelativeDocumentMoniker": "Controllers\\SmsController.cs",
               "ToolTip": "D:\\GitHub\\cosmeticsAPI\\Controllers\\SmsController.cs",
               "RelativeToolTip": "Controllers\\SmsController.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAAADYAAAAoAAAAAAAAAA==",
+              "ViewState": "AgIAADEAAAAAAAAAAAAAADEAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-22T13:36:10.26Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-22T13:36:10.26Z"
             }
           ]
         },
