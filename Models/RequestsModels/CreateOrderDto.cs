@@ -1,10 +1,16 @@
 ﻿namespace PharmacyAPI.Models.RequestsModels
 {
+    public sealed class CreateOrderRequest
+    {
+        public List<CreateOrderItemDto> Items { get; set; } = [];
+
+        public decimal ClientTotal { get; set; }
+    }
     public class CreateOrderDto
     {
         public ClientDto Client { get; set; } = new();
 
-        public List<CreateOrderItemDto> Items { get; set; }
+        public CreateOrderRequest OrderRequest { get; set; }
             = new();
     }
 

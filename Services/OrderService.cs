@@ -346,86 +346,62 @@ namespace PharmacyAPI.Services
                 CancellationToken.None) != null;
         }
 
+
         public async Task<Order> CreateOrder(
-    CreateOrderDto dto,
-    CancellationToken cancellationToken = default)
+            CreateOrderDto dto,
+            CancellationToken cancellationToken = default)
         {
             // =====================================================
             // VALIDATE REQUEST
             // =====================================================
 
             if (dto.Client == null)
-            {
-                throw new InvalidOperationException(
-                    "معلومات العميل غير متوفره.");
-            }
+                throw new InvalidOperationException("معلومات العميل غير متوفره.");
 
             if (string.IsNullOrWhiteSpace(dto.Client.Name))
-            {
-                throw new InvalidOperationException(
-                    "اسم العميل مطلوب.");
-            }
+                throw new InvalidOperationException("اسم العميل مطلوب.");
 
             if (string.IsNullOrWhiteSpace(dto.Client.PhoneNumber))
-            {
-                throw new InvalidOperationException(
-                    "رقم العميل مطلوب.");
-            }
+                throw new InvalidOperationException("رقم العميل مطلوب.");
 
             if (string.IsNullOrWhiteSpace(dto.Client.Address))
-            {
-                throw new InvalidOperationException(
-                    "عنوان العميل مطلوب.");
-            }
-            if (string.IsNullOrWhiteSpace(dto.Client.governorate))
-            {
-                throw new InvalidOperationException(
-                    "محافظة العميل مطلوب.");
-            }
+                throw new InvalidOperationException("عنوان العميل مطلوب.");
 
-            if (dto.Items == null || dto.Items.Count == 0)
+            if (string.IsNullOrWhiteSpace(dto.Client.governorate))
+                throw new InvalidOperationException("محافظة العميل مطلوب.");
+
+            if (dto.OrderRequest?.Items == null ||
+                dto.OrderRequest.Items.Count == 0)
             {
                 throw new InvalidOperationException(
                     "الطلب يجب ان يحتوي علي الاقل علي منتج واحد.");
             }
 
+            if (dto.OrderRequest.ClientTotal < 0)
+            {
+                throw new InvalidOperationException(
+                    "إجمالي الطلب غير صحيح.");
+            }
 
             // =====================================================
             // VALIDATE ITEM QUANTITIES
             // =====================================================
 
-            foreach (var item in dto.Items)
+            foreach (var item in dto.OrderRequest.Items)
             {
                 if (item.ProductId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        "منتج غير متوفر.");
-                }
+                    throw new InvalidOperationException("منتج غير متوفر.");
 
                 if (item.Quantity <= 0)
-                {
                     throw new InvalidOperationException(
                         "الكميه يجب ان تكون اكبر من الصفر.");
-                }
             }
 
-
             // =====================================================
-            // PREVENT DUPLICATE PRODUCTS
-            // =====================================================
-            //
-            // If the same product is sent twice:
-            //
-            // product 10 -> quantity 2
-            // product 10 -> quantity 3
-            //
-            // It becomes:
-            //
-            // product 10 -> quantity 5
-            //
+            // COMBINE DUPLICATE PRODUCTS
             // =====================================================
 
-            var requestedItems = dto.Items
+            var requestedItems = dto.OrderRequest.Items
                 .GroupBy(x => x.ProductId)
                 .Select(g => new
                 {
@@ -434,9 +410,8 @@ namespace PharmacyAPI.Services
                 })
                 .ToList();
 
-
             // =====================================================
-            // GET PRODUCTS
+            // LOAD CURRENT PRODUCTS AND PRICES
             // =====================================================
 
             var productIds = requestedItems
@@ -452,11 +427,6 @@ namespace PharmacyAPI.Services
                     p => p.Id,
                     cancellationToken);
 
-
-            // =====================================================
-            // CHECK ALL PRODUCTS EXIST
-            // =====================================================
-
             if (products.Count != productIds.Count)
             {
                 var missingProductId = productIds
@@ -466,25 +436,73 @@ namespace PharmacyAPI.Services
                     $"المنتج {missingProductId} غير موجود.");
             }
 
+            // =====================================================
+            // CALCULATE TOTAL USING DATABASE PRICES
+            // =====================================================
+
+            decimal total = 0;
+
+            var orderItems = new List<OrderItem>();
+
+            foreach (var requestedItem in requestedItems)
+            {
+                var product = products[requestedItem.ProductId];
+
+                var originalPrice = product.Price;
+                var discount = product.DiscountPercentage;
+
+                decimal unitPrice;
+
+                if (discount > 0)
+                {
+                    unitPrice = originalPrice -
+                        (originalPrice * discount / 100m);
+                }
+                else
+                {
+                    unitPrice = originalPrice;
+                }
+
+                // Match the frontend's unit-price rounding.
+                unitPrice = Math.Round(
+                    unitPrice,
+                    2,
+                    MidpointRounding.AwayFromZero);
+
+                var subtotal = unitPrice * requestedItem.Quantity;
+
+                total += subtotal;
+
+                orderItems.Add(new OrderItem
+                {
+                    ActualPrice = product.ActualPrice,
+                    ProductId = product.Id,
+                    Quantity = requestedItem.Quantity,
+                    UnitPrice = unitPrice
+                });
+            }
+
+            var currentTotal = Math.Round(
+                total,
+                2,
+                MidpointRounding.AwayFromZero);
+
+            var clientTotal = Math.Round(
+                dto.OrderRequest.ClientTotal,
+                2,
+                MidpointRounding.AwayFromZero);
 
             // =====================================================
-            // FIND CLIENT
+            // REJECT IF PRICE CHANGED
             // =====================================================
 
-            var phoneNumber =
-                dto.Client.PhoneNumber.Trim();
-
-            var now =
-                DateTime.UtcNow;
-
-            var client = await _context.Clients
-                .FirstOrDefaultAsync(
-                    x => x.PhoneNumber == phoneNumber,
-                    cancellationToken);
-
+            if (clientTotal != currentTotal)
+            {
+                throw new InvalidOperationException("حدث تغير في الاسعار من فضلك راجع الاسعار مره اخري ");
+            }
 
             // =====================================================
-            // START TRANSACTION
+            // START TRANSACTION AFTER PRICE VALIDATION
             // =====================================================
 
             await using var transaction =
@@ -493,65 +511,49 @@ namespace PharmacyAPI.Services
 
             try
             {
+                var phoneNumber = dto.Client.PhoneNumber.Trim();
+                var now = DateTime.UtcNow;
+
                 // =================================================
-                // CREATE CLIENT
+                // FIND OR CREATE CLIENT
                 // =================================================
+
+                var client = await _context.Clients
+                    .FirstOrDefaultAsync(
+                        x => x.PhoneNumber == phoneNumber,
+                        cancellationToken);
 
                 if (client == null)
                 {
                     client = new Client
                     {
                         Name = dto.Client.Name.Trim(),
-
-                        PhoneNumber =
-                            phoneNumber,
-
-                        Address =
-                            dto.Client.Address.Trim(),
-
-                        governorate =
-
-                            dto.Client.governorate.Trim(),
-                        Email =
-                            string.IsNullOrWhiteSpace(
-                                dto.Client.Email)
-                                ? null
-                                : dto.Client.Email.Trim(),
-
+                        PhoneNumber = phoneNumber,
+                        Address = dto.Client.Address.Trim(),
+                        governorate = dto.Client.governorate.Trim(),
+                        Email = string.IsNullOrWhiteSpace(dto.Client.Email)
+                            ? null
+                            : dto.Client.Email.Trim(),
                         CreatedAt = now
                     };
 
                     _context.Clients.Add(client);
-
-                    await _context.SaveChangesAsync(
-                        cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
                 }
                 else
                 {
-                    // =============================================
-                    // UPDATE EXISTING CLIENT
-                    // =============================================
+                    client.Name = dto.Client.Name.Trim();
+                    client.Address = dto.Client.Address.Trim();
+                    client.governorate = dto.Client.governorate.Trim();
 
-                    client.Name =
-                        dto.Client.Name.Trim();
-
-                    client.Address =
-                        dto.Client.Address.Trim();
-                    client.governorate =
-                       dto.Client.governorate.Trim();    
-
-                    client.Email =
-                        string.IsNullOrWhiteSpace(
-                            dto.Client.Email)
-                            ? null
-                            : dto.Client.Email.Trim();
+                    client.Email = string.IsNullOrWhiteSpace(dto.Client.Email)
+                        ? null
+                        : dto.Client.Email.Trim();
 
                     client.UpdatedAt = now;
 
-                    await _context.SaveChangesAsync(
-                        cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
                 }
-
 
                 // =================================================
                 // CREATE ORDER
@@ -559,157 +561,405 @@ namespace PharmacyAPI.Services
 
                 var order = new Order
                 {
-                    ClientId =
-                        client.Id,
-
-                    OrderDate =
-                        now,
-
-                    Status =
-                        OrderStatus.Pending,
-
-                    TotalAmount =
-                        0,
-
-                    Items =
-                        new List<OrderItem>()
+                    ClientId = client.Id,
+                    OrderDate = now,
+                    Status = OrderStatus.Pending,
+                    TotalAmount = currentTotal,
+                    Items = orderItems
                 };
-
-
-                decimal total = 0;
-
-
-                // =================================================
-                // CREATE ORDER ITEMS
-                // =================================================
-
-                foreach (var requestedItem in requestedItems)
-                {
-                    var product =
-                        products[requestedItem.ProductId];
-
-
-                    // =============================================
-                    // GET ORIGINAL PRICE
-                    // =============================================
-
-                    var originalPrice =
-                        product.Price;
-
-
-                    // =============================================
-                    // GET DISCOUNT
-                    // =============================================
-
-                    var discount =
-                        product.DiscountPercentage;
-
-
-                    // =============================================
-                    // CALCULATE FINAL PRICE
-                    // =============================================
-
-                    decimal unitPrice;
-
-                    if (discount > 0)
-                    {
-                        unitPrice =
-                            originalPrice -
-                            (
-                                originalPrice *
-                                discount /
-                                100
-                            );
-                    }
-                    else
-                    {
-                        unitPrice =
-                            originalPrice;
-                    }
-
-
-                    // =============================================
-                    // ROUND MONEY TO 2 DECIMAL PLACES
-                    // =============================================
-
-                    unitPrice =
-                        Math.Round(
-                            unitPrice,
-                            2,
-                            MidpointRounding.AwayFromZero);
-
-
-                    // =============================================
-                    // ITEM TOTAL
-                    // =============================================
-
-                    var subtotal =
-                        unitPrice *
-                        requestedItem.Quantity;
-
-
-                    total += subtotal;
-
-
-                    // =============================================
-                    // ADD ORDER ITEM
-                    // =============================================
-
-                    order.Items.Add(
-                        new OrderItem
-                        {
-                            ActualPrice=product.ActualPrice,
-                            ProductId =
-                                product.Id,
-
-                            Quantity =
-                                requestedItem.Quantity,
-
-                            UnitPrice =
-                                unitPrice
-                        });
-                }
-
-
-                // =================================================
-                // FINAL TOTAL
-                // =================================================
-
-                order.TotalAmount =
-                    Math.Round(
-                        total,
-                        2,
-                        MidpointRounding.AwayFromZero);
-
-
-                // =================================================
-                // SAVE ORDER
-                // =================================================
 
                 _context.Orders.Add(order);
 
-                await _context.SaveChangesAsync(
-                    cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
- //  SendMsg(client.PhoneNumber,"order sent");
                 // =================================================
                 // COMMIT
                 // =================================================
 
-                await transaction.CommitAsync(
-                    cancellationToken);
-
+                await transaction.CommitAsync(cancellationToken);
 
                 return order;
             }
             catch
             {
-                await transaction.RollbackAsync(
-                    cancellationToken);
-
+                await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
         }
+
+
+
+
+        //       public async Task<Order> CreateOrder(
+        //   CreateOrderDto dto,
+        //   CancellationToken cancellationToken = default)
+        //       {
+        //           // =====================================================
+        //           // VALIDATE REQUEST
+        //           // =====================================================
+
+        //           if (dto.Client == null)
+        //           {
+        //               throw new InvalidOperationException(
+        //                   "معلومات العميل غير متوفره.");
+        //           }
+
+        //           if (string.IsNullOrWhiteSpace(dto.Client.Name))
+        //           {
+        //               throw new InvalidOperationException(
+        //                   "اسم العميل مطلوب.");
+        //           }
+
+        //           if (string.IsNullOrWhiteSpace(dto.Client.PhoneNumber))
+        //           {
+        //               throw new InvalidOperationException(
+        //                   "رقم العميل مطلوب.");
+        //           }
+
+        //           if (string.IsNullOrWhiteSpace(dto.Client.Address))
+        //           {
+        //               throw new InvalidOperationException(
+        //                   "عنوان العميل مطلوب.");
+        //           }
+        //           if (string.IsNullOrWhiteSpace(dto.Client.governorate))
+        //           {
+        //               throw new InvalidOperationException(
+        //                   "محافظة العميل مطلوب.");
+        //           }
+
+        //           if (dto.OrderRequest.Items == null || dto.OrderRequest.Items.Count == 0)
+        //           {
+        //               throw new InvalidOperationException(
+        //                   "الطلب يجب ان يحتوي علي الاقل علي منتج واحد.");
+        //           }
+
+
+        //           // =====================================================
+        //           // VALIDATE ITEM QUANTITIES
+        //           // =====================================================
+
+        //           foreach (var item in dto.OrderRequest.Items)
+        //           {
+        //               if (item.ProductId <= 0)
+        //               {
+        //                   throw new InvalidOperationException(
+        //                       "منتج غير متوفر.");
+        //               }
+
+        //               if (item.Quantity <= 0)
+        //               {
+        //                   throw new InvalidOperationException(
+        //                       "الكميه يجب ان تكون اكبر من الصفر.");
+        //               }
+        //           }
+
+
+        //           // =====================================================
+        //           // PREVENT DUPLICATE PRODUCTS
+        //           // =====================================================
+        //           //
+        //           // If the same product is sent twice:
+        //           //
+        //           // product 10 -> quantity 2
+        //           // product 10 -> quantity 3
+        //           //
+        //           // It becomes:
+        //           //
+        //           // product 10 -> quantity 5
+        //           //
+        //           // =====================================================
+
+        //           var requestedItems = dto.OrderRequest.Items
+        //               .GroupBy(x => x.ProductId)
+        //               .Select(g => new
+        //               {
+        //                   ProductId = g.Key,
+        //                   Quantity = g.Sum(x => x.Quantity)
+        //               })
+        //               .ToList();
+
+
+        //           // =====================================================
+        //           // GET PRODUCTS
+        //           // =====================================================
+
+        //           var productIds = requestedItems
+        //               .Select(x => x.ProductId)
+        //               .ToList();
+
+        //           var products = await _context.Products
+        //               .AsNoTracking()
+        //               .Where(p =>
+        //                   productIds.Contains(p.Id) &&
+        //                   !p.IsDeleted)
+        //               .ToDictionaryAsync(
+        //                   p => p.Id,
+        //                   cancellationToken);
+
+
+        //           // =====================================================
+        //           // CHECK ALL PRODUCTS EXIST
+        //           // =====================================================
+
+        //           if (products.Count != productIds.Count)
+        //           {
+        //               var missingProductId = productIds
+        //                   .First(id => !products.ContainsKey(id));
+
+        //               throw new KeyNotFoundException(
+        //                   $"المنتج {missingProductId} غير موجود.");
+        //           }
+
+
+        //           // =====================================================
+        //           // FIND CLIENT
+        //           // =====================================================
+
+        //           var phoneNumber =
+        //               dto.Client.PhoneNumber.Trim();
+
+        //           var now =
+        //               DateTime.UtcNow;
+
+        //           var client = await _context.Clients
+        //               .FirstOrDefaultAsync(
+        //                   x => x.PhoneNumber == phoneNumber,
+        //                   cancellationToken);
+
+
+        //           // =====================================================
+        //           // START TRANSACTION
+        //           // =====================================================
+
+        //           await using var transaction =
+        //               await _context.Database.BeginTransactionAsync(
+        //                   cancellationToken);
+
+        //           try
+        //           {
+        //               // =================================================
+        //               // CREATE CLIENT
+        //               // =================================================
+
+        //               if (client == null)
+        //               {
+        //                   client = new Client
+        //                   {
+        //                       Name = dto.Client.Name.Trim(),
+
+        //                       PhoneNumber =
+        //                           phoneNumber,
+
+        //                       Address =
+        //                           dto.Client.Address.Trim(),
+
+        //                       governorate =
+
+        //                           dto.Client.governorate.Trim(),
+        //                       Email =
+        //                           string.IsNullOrWhiteSpace(
+        //                               dto.Client.Email)
+        //                               ? null
+        //                               : dto.Client.Email.Trim(),
+
+        //                       CreatedAt = now
+        //                   };
+
+        //                   _context.Clients.Add(client);
+
+        //                   await _context.SaveChangesAsync(
+        //                       cancellationToken);
+        //               }
+        //               else
+        //               {
+        //                   // =============================================
+        //                   // UPDATE EXISTING CLIENT
+        //                   // =============================================
+
+        //                   client.Name =
+        //                       dto.Client.Name.Trim();
+
+        //                   client.Address =
+        //                       dto.Client.Address.Trim();
+        //                   client.governorate =
+        //                      dto.Client.governorate.Trim();    
+
+        //                   client.Email =
+        //                       string.IsNullOrWhiteSpace(
+        //                           dto.Client.Email)
+        //                           ? null
+        //                           : dto.Client.Email.Trim();
+
+        //                   client.UpdatedAt = now;
+
+        //                   await _context.SaveChangesAsync(
+        //                       cancellationToken);
+        //               }
+
+
+        //               // =================================================
+        //               // CREATE ORDER
+        //               // =================================================
+
+        //               var order = new Order
+        //               {
+        //                   ClientId =
+        //                       client.Id,
+
+        //                   OrderDate =
+        //                       now,
+
+        //                   Status =
+        //                       OrderStatus.Pending,
+
+        //                   TotalAmount =
+        //                       0,
+
+        //                   Items =
+        //                       new List<OrderItem>()
+        //               };
+
+
+        //               decimal total = 0;
+
+
+        //               // =================================================
+        //               // CREATE ORDER ITEMS
+        //               // =================================================
+
+        //               foreach (var requestedItem in requestedItems)
+        //               {
+        //                   var product =
+        //                       products[requestedItem.ProductId];
+
+
+        //                   // =============================================
+        //                   // GET ORIGINAL PRICE
+        //                   // =============================================
+
+        //                   var originalPrice =
+        //                       product.Price;
+
+
+        //                   // =============================================
+        //                   // GET DISCOUNT
+        //                   // =============================================
+
+        //                   var discount =
+        //                       product.DiscountPercentage;
+
+
+        //                   // =============================================
+        //                   // CALCULATE FINAL PRICE
+        //                   // =============================================
+
+        //                   decimal unitPrice;
+
+        //                   if (discount > 0)
+        //                   {
+        //                       unitPrice =
+        //                           originalPrice -
+        //                           (
+        //                               originalPrice *
+        //                               discount /
+        //                               100
+        //                           );
+        //                   }
+        //                   else
+        //                   {
+        //                       unitPrice =
+        //                           originalPrice;
+        //                   }
+
+
+        //                   // =============================================
+        //                   // ROUND MONEY TO 2 DECIMAL PLACES
+        //                   // =============================================
+
+        //                   unitPrice =
+        //                       Math.Round(
+        //                           unitPrice,
+        //                           2,
+        //                           MidpointRounding.AwayFromZero);
+
+
+        //                   // =============================================
+        //                   // ITEM TOTAL
+        //                   // =============================================
+
+        //                   var subtotal =
+        //                       unitPrice *
+        //                       requestedItem.Quantity;
+
+
+        //                   total += subtotal;
+
+
+        //                   // =============================================
+        //                   // ADD ORDER ITEM
+        //                   // =============================================
+
+        //                   order.Items.Add(
+        //                       new OrderItem
+        //                       {
+        //                           ActualPrice=product.ActualPrice,
+        //                           ProductId =
+        //                               product.Id,
+
+        //                           Quantity =
+        //                               requestedItem.Quantity,
+
+        //                           UnitPrice =
+        //                               unitPrice
+        //                       });
+        //               }
+
+
+        //               // =================================================
+        //               // FINAL TOTAL
+        //               // =================================================
+
+        //               order.TotalAmount =
+        //                   Math.Round(
+        //                       total,
+        //                       2,
+        //                       MidpointRounding.AwayFromZero);
+        //               if(order.TotalAmount != dto.OrderRequest.ClientTotal)
+        //               {
+
+        //                   throw new InvalidOperationException(
+        //                  "حدث تغير في الاسعار برجاء مراجعه الطلب مره اخري  .");
+        //               }
+
+
+        //               // =================================================
+        //               // SAVE ORDER
+        //               // =================================================
+
+        //               _context.Orders.Add(order);
+
+        //               await _context.SaveChangesAsync(
+        //                   cancellationToken);
+
+        ////  SendMsg(client.PhoneNumber,"order sent");
+        //               // =================================================
+        //               // COMMIT
+        //               // =================================================
+
+        //               await transaction.CommitAsync(
+        //                   cancellationToken);
+
+
+        //               return order;
+        //           }
+        //           catch
+        //           {
+        //               await transaction.RollbackAsync(
+        //                   cancellationToken);
+
+        //               throw;
+        //           }
+        //       }
 
 
 
@@ -939,7 +1189,7 @@ namespace PharmacyAPI.Services
             await _context.SaveChangesAsync(
                 cancellationToken);
 
-            SendMsg(client.PhoneNumber, " شكرا لتواصلكم مع E-Commerce تم تاكيد طلبكم ");
+            SendMsg(client.PhoneNumber, " شكرا لتواصلكم مع Avera تم تاكيد طلبكم ");
 
             return true;
         }

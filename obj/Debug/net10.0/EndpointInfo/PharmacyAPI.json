@@ -2673,12 +2673,8 @@
           "client": {
             "$ref": "#/components/schemas/ClientDto"
           },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreateOrderItemDto"
-            },
-            "nullable": true
+          "orderRequest": {
+            "$ref": "#/components/schemas/CreateOrderRequest"
           }
         },
         "additionalProperties": false
@@ -2693,6 +2689,23 @@
           "quantity": {
             "type": "integer",
             "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderItemDto"
+            },
+            "nullable": true
+          },
+          "clientTotal": {
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false

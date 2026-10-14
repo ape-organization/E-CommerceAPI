@@ -297,7 +297,7 @@ namespace PharmacyAPI.Services
                         EF.Functions.Like(p.NameAr, $"%{name}%")
                     ))
            .OrderByDescending(p => p.CreatedAt)
-                .Select(MapAllProduct()).Take(50)
+                .Select(MapAllProduct()).Take(20)
                 .ToListAsync(cancellationToken);
         }
 

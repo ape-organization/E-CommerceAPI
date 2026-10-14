@@ -56,7 +56,7 @@ namespace PharmacyAPI.Services
             var request = new
             {
                 phoneNumber,
-                message = $"E-commerce\nOTP: رمز التحقق {otp}",
+                message = $"Avera\nOTP: رمز التحقق {otp}",
             senderId = _smsSenderId,
                 senderName = _smsSenderName
             };
