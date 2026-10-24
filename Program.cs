@@ -54,7 +54,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ISliderService, SliderService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<  IBrandService, BrandService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<IEmailService, EmailService>();
 
 //http request 
 builder.Services.AddMemoryCache();
