@@ -1485,7 +1485,7 @@ namespace PharmacyAPI.Services
 </html>";
 
                 await _emailService.SendEmailAsync(
-                    "ereny.karam.noshy@gmail.com",
+                    "minaromany243@gmail.com",
                     $"إشعار طلب جديد رقم #{order.Id}",
                     emailBody);
             }

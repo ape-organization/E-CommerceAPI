@@ -64,6 +64,7 @@ builder.Services.AddHttpClient<SmsIntegrationService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
 // CORS
 builder.Services.AddCors(opt =>
 {
