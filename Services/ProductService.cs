@@ -95,18 +95,13 @@ namespace PharmacyAPI.Services
         {
 
 
-            var products = _context.Products
+            return await _context.Products
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted &&p.Id!=productID && p.SubCategories.Any(sc => sc.Id == subID))
-                .OrderByDescending(p=>p.CreatedAt)
+                .Where(p => !p.IsDeleted && p.Id != productID && p.SubCategories.Any(sc => sc.Id == subID))
+                .OrderByDescending(p => p.CreatedAt)
                 .Take(30)
-                .Select(MapProduct())
-                .ToList();
-
-
-
-
-            return products;
+                .Select(MapProduct)
+                .ToListAsync(cancellationToken);
         }
 
 
@@ -117,19 +112,13 @@ namespace PharmacyAPI.Services
         {
             var fromDate = DateTime.UtcNow.AddMonths(-1);
 
-            var products = _context.Products
+            return await _context.Products
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted && p.CreatedAt >= fromDate)
-                .OrderByDescending(p=>p.CreatedAt)
-                  .Take(50)
-
-                .Select(MapProduct())
-                .ToList();
-
-
-
-
-            return products;
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(50)
+                .Select(MapProduct)
+                .ToListAsync(cancellationToken);
         }
 
         // =====================================================
@@ -220,7 +209,7 @@ namespace PharmacyAPI.Services
                 .OrderByDescending(p => p.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(MapAllProduct())
+                .Select(MapAllProduct)
                 .ToListAsync(cancellationToken);
 
             // =================================================
@@ -244,21 +233,12 @@ namespace PharmacyAPI.Services
   
      CancellationToken cancellationToken = default)
         {
-         
-
-            IQueryable<Product> query = _context.Products
+            return await _context.Products
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted);
-
-                 var products =  query
+                .Where(p => !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedAt)
-             
-                .Select(MapAllProduct())
-                .ToList();
-
-          
-
-            return products;
+                .Select(MapAllProduct)
+                .ToListAsync(cancellationToken);
         }
 
 
@@ -271,7 +251,7 @@ namespace PharmacyAPI.Services
                 .Where(p =>
                     p.Id == id &&
                     !p.IsDeleted)
-                .Select(MapAllProduct())
+                .Select(MapAllProduct)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -297,7 +277,7 @@ namespace PharmacyAPI.Services
                         EF.Functions.Like(p.NameAr, $"%{name}%")
                     ))
            .OrderByDescending(p => p.CreatedAt)
-                .Select(MapAllProduct()).Take(20)
+                .Select(MapAllProduct).Take(20)
                 .ToListAsync(cancellationToken);
         }
 
@@ -327,7 +307,7 @@ namespace PharmacyAPI.Services
                     ids.Contains(p.Id) &&
                     !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedAt)
-                .Select(MapAllProduct())
+                .Select(MapAllProduct)
                 .ToListAsync(cancellationToken);
         }
 
@@ -338,14 +318,14 @@ namespace PharmacyAPI.Services
         public async Task<List<SubProductResponseDto>> GetDiscountedProducts(
             CancellationToken cancellationToken = default)
         {
-            return  _context.Products
+            return await _context.Products
                 .AsNoTracking()
                 .Where(p =>
                     !p.IsDeleted &&
                     p.DiscountPercentage > 0)
-              .OrderByDescending(p => p.CreatedAt)
-                .Select(MapProduct())
-                .ToList();
+                .OrderByDescending(p => p.CreatedAt)
+                .Select(MapProduct)
+                .ToListAsync(cancellationToken);
         }
 
         // =====================================================
@@ -396,9 +376,10 @@ namespace PharmacyAPI.Services
                     productIds.Contains(p.Id) &&
                     !p.IsDeleted &&
                     p.IsInStock)
-                .OrderByDescending(p => p.CreatedAt)
-                .Select(MapProduct())
+                .Select(MapProduct)
                 .ToListAsync(cancellationToken);
+
+            // Ordered in memory by sales rank below, so no SQL ORDER BY needed.
 
             var ranking = bestSellerIds
                 .Select((x, index) => new
@@ -780,9 +761,25 @@ namespace PharmacyAPI.Services
                 // UPDATE SUBCATEGORIES
                 // =================================================
 
-                product.SubCategories.Clear();
+                // Only remove/add the links that actually changed,
+                // instead of clearing and re-inserting all of them.
+                var newSubCategoryIds = subCategories
+                    .Select(sc => sc.Id)
+                    .ToHashSet();
 
-                foreach (var subCategory in subCategories)
+                foreach (var existing in product.SubCategories
+                    .Where(sc => !newSubCategoryIds.Contains(sc.Id))
+                    .ToList())
+                {
+                    product.SubCategories.Remove(existing);
+                }
+
+                var currentSubCategoryIds = product.SubCategories
+                    .Select(sc => sc.Id)
+                    .ToHashSet();
+
+                foreach (var subCategory in subCategories
+                    .Where(sc => !currentSubCategoryIds.Contains(sc.Id)))
                 {
                     product.SubCategories.Add(subCategory);
                 }
@@ -828,19 +825,15 @@ namespace PharmacyAPI.Services
             int id,
             CancellationToken cancellationToken = default)
         {
-            var product = await _context.Products
-                .FirstOrDefaultAsync(
-                    p =>
-                        p.Id == id &&
-                        !p.IsDeleted,
+            // Single UPDATE statement; no need to load the entity first.
+            var updated = await _context.Products
+                .Where(p => p.Id == id && !p.IsDeleted)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(p => p.DiscountPercentage, 0m),
                     cancellationToken);
 
-            if (product is null)
+            if (updated == 0)
                 return null;
-
-            product.DiscountPercentage = 0;
-
-            await _context.SaveChangesAsync(cancellationToken);
 
             return await GetProduct(id, cancellationToken);
         }
@@ -853,30 +846,23 @@ namespace PharmacyAPI.Services
             int id,
             CancellationToken cancellationToken = default)
         {
-            var product = await _context.Products
-                .FirstOrDefaultAsync(
-                    p =>
-                        p.Id == id &&
-                        !p.IsDeleted,
+            // Soft delete in a single UPDATE statement that only touches IsDeleted
+            // (previously Update() rewrote every column after a separate SELECT).
+            var deleted = await _context.Products
+                .Where(p => p.Id == id && !p.IsDeleted)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(p => p.IsDeleted, true),
                     cancellationToken);
 
-            if (product is null)
-                return false;
-
-            product.IsDeleted = true;
-            _context.Products.Update(product);
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return true;
+            return deleted > 0;
         }
 
         // =====================================================
         // PRODUCT DTO PROJECTION
         // =====================================================
-        private static Expression<Func<Product, SubProductResponseDto>> MapProduct()
-        {
-            return p => new SubProductResponseDto
+        // Built once and reused instead of rebuilding the expression tree per call.
+        private static readonly Expression<Func<Product, SubProductResponseDto>> MapProduct =
+            p => new SubProductResponseDto
             {
                 Id = p.Id,
 
@@ -899,15 +885,10 @@ namespace PharmacyAPI.Services
                     },
 
                 BrandId = p.BrandId
-                
-            
             };
-        }
 
-
-        private static Expression<Func<Product, ProductResponseDto>> MapAllProduct()
-        {
-            return p => new ProductResponseDto
+        private static readonly Expression<Func<Product, ProductResponseDto>> MapAllProduct =
+            p => new ProductResponseDto
             {
                 Id = p.Id,
 
@@ -946,12 +927,11 @@ namespace PharmacyAPI.Services
                         NameEn = sc.NameEn,
                         NameAr = sc.NameAr,
                         CategoryId = sc.CategoryId,
-                        CategoryNameAr=sc.NameAr,
-                        CategoryNameEn=sc.NameEn
+                        CategoryNameAr = sc.Category.NameAr,
+                        CategoryNameEn = sc.Category.NameEn
                     })
                     .ToList()
             };
-        }
 
         // =====================================================
         // SAVE IMAGE

@@ -251,52 +251,38 @@ namespace PharmacyAPI.Services
     int id,
     CancellationToken cancellationToken = default)
         {
-            // Get brand
-            var brand = await _context.Brand
-                .FirstOrDefaultAsync(
-                    b => b.Id == id,
-                    cancellationToken);
-
-            if (brand is null)
-            {
-                return false;
-            }
-
-            
-
-            // ---------------------------------------------------------
-            // Get ALL products belonging to this brand
-            // ---------------------------------------------------------
-
-            var products = await _context.Products
-                .Where(p => p.BrandId == id &&!p.IsDeleted)
-                .ToListAsync(cancellationToken);
-
-           
-
-            // ---------------------------------------------------------
-            // Delete all products
-            // ---------------------------------------------------------
-
-            if (products.Count > 0)
-            {
-                products.ForEach(p => p.IsDeleted = true);
-                _context.Products.UpdateRange(products);
-            }
+            // Set-based UPDATEs instead of loading every product of the
+            // brand into memory and rewriting all of their columns.
+            // The transaction keeps brand + products all-or-nothing.
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
             // ---------------------------------------------------------
             // Delete brand
             // ---------------------------------------------------------
-            brand.IsDeleted = true;
-            _context.Brand.Update(brand);
+
+            var brandUpdated = await _context.Brand
+                .Where(b => b.Id == id)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(b => b.IsDeleted, true),
+                    cancellationToken);
+
+            if (brandUpdated == 0)
+            {
+                return false;
+            }
 
             // ---------------------------------------------------------
-            // Save database changes
+            // Delete all products belonging to this brand
             // ---------------------------------------------------------
 
-            await _context.SaveChangesAsync(cancellationToken);
+            await _context.Products
+                .Where(p => p.BrandId == id && !p.IsDeleted)
+                .ExecuteUpdateAsync(
+                    s => s.SetProperty(p => p.IsDeleted, true),
+                    cancellationToken);
 
-            
+            await transaction.CommitAsync(cancellationToken);
 
             return true;
         }

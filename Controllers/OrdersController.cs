@@ -309,8 +309,8 @@ namespace PharmacyAPI.Controllers
         }
 
         // =====================================================
-        // CANCEL ORDER
-        // PUT: api/orders/5/cancel
+        // COMPLETE ORDER
+        // PUT: api/orders/5/complete
         // =====================================================
 
         [HttpPut("{id:int}/complete")]
@@ -336,7 +336,7 @@ namespace PharmacyAPI.Controllers
                 return Ok(new
                 {
                     message =
-                        "تم الغاء الطلب بنجاح"
+                        "تم تأكيد الطلب بنجاح"
                 });
             }
             catch (InvalidOperationException ex)

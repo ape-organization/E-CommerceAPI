@@ -4,6 +4,15 @@ namespace PharmacyAPI.Services;
 
 public class ImageService
 {
+    private static readonly HashSet<string> AllowedExtensions =
+    [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".jfif"
+    ];
+
     private readonly string _uploadPath;
 
     public ImageService(IConfiguration configuration)
@@ -23,16 +32,7 @@ public class ImageService
         var extension = Path.GetExtension(image.FileName)
             .ToLowerInvariant();
 
-        var allowedExtensions = new[]
-        {
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".webp",
-            ".jfif"
-        };
-
-        if (!allowedExtensions.Contains(extension))
+        if (!AllowedExtensions.Contains(extension))
             throw new ArgumentException("نوع الصوره ليس متوافر");
 
         var folderPath = Path.Combine(
@@ -51,9 +51,15 @@ public class ImageService
             folderPath,
             fileName);
 
+        // useAsync makes CopyToAsync do real async I/O instead of
+        // blocking a thread-pool thread on each write.
         await using var stream = new FileStream(
             filePath,
-            FileMode.Create);
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            bufferSize: 81920,
+            useAsync: true);
 
         await image.CopyToAsync(
             stream,
@@ -61,7 +67,7 @@ public class ImageService
 
         return $"/uploads/E_Commerce/{folder}/{fileName}";
     }
-    public async  void DeleteImage(string imageUrl)
+    public void DeleteImage(string imageUrl)
     {
         try
         {

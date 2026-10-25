@@ -18,7 +18,9 @@ builder.Services.AddControllers()
     .AddJsonOptions(opt => opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
 // EF Core
-builder.Services.AddDbContext<PharmacyDbContext>(opt =>
+// Pooled: reuses DbContext instances across requests instead of
+// constructing a new one (and its internal services) every time.
+builder.Services.AddDbContextPool<PharmacyDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 // EF Core
 //builder.Services.AddDbContext<PharmacyDbContext>(opt =>

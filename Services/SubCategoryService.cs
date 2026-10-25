@@ -398,17 +398,17 @@ namespace PharmacyAPI.Services
             // CHECK SUBCATEGORY
             // -------------------------------------------------
 
-            var subCategoryExists =
-                await _context.SubCategories
-                    .AsNoTracking()
-                    .AnyAsync(
-                        sc =>
-                            sc.Id == subCategoryId &&
-                            !sc.IsDeleted,
-                        cancellationToken);
+            // Load the entities directly instead of checking existence
+            // first and loading them again afterwards (saves 2 queries).
+            var subCategory = await _context.SubCategories
+                .FirstOrDefaultAsync(
+                    sc =>
+                        sc.Id == subCategoryId &&
+                        !sc.IsDeleted,
+                    cancellationToken);
 
 
-            if (!subCategoryExists)
+            if (subCategory is null)
             {
                 return false;
             }
@@ -418,17 +418,15 @@ namespace PharmacyAPI.Services
             // CHECK PRODUCT
             // -------------------------------------------------
 
-            var productExists =
-                await _context.Products
-                    .AsNoTracking()
-                    .AnyAsync(
-                        p =>
-                            p.Id == productId &&
-                            !p.IsDeleted,
-                        cancellationToken);
+            var product = await _context.Products
+                .FirstOrDefaultAsync(
+                    p =>
+                        p.Id == productId &&
+                        !p.IsDeleted,
+                    cancellationToken);
 
 
-            if (!productExists)
+            if (product is null)
             {
                 throw new KeyNotFoundException(
                     "Product not found.");
@@ -454,22 +452,6 @@ namespace PharmacyAPI.Services
             }
 
 
-            // -------------------------------------------------
-            // LOAD ONLY THE REQUIRED ENTITIES
-            // -------------------------------------------------
-
-            var subCategory = await _context.SubCategories
-                .FirstAsync(
-                    sc => sc.Id == subCategoryId,
-                    cancellationToken);
-
-
-            var product = await _context.Products
-                .FirstAsync(
-                    p => p.Id == productId,
-                    cancellationToken);
-
-
             subCategory.Products.Add(product);
 
 
@@ -490,8 +472,13 @@ namespace PharmacyAPI.Services
             int productId,
             CancellationToken cancellationToken = default)
         {
+            // Load only the one product link we need instead of
+            // every product in the subcategory.
             var subCategory = await _context.SubCategories
-                .Include(sc => sc.Products)
+                .Include(sc => sc.Products
+                    .Where(p =>
+                        p.Id == productId &&
+                        !p.IsDeleted))
                 .FirstOrDefaultAsync(
                     sc =>
                         sc.Id == subCategoryId &&
@@ -505,11 +492,7 @@ namespace PharmacyAPI.Services
             }
 
 
-            var product = subCategory.Products
-                .FirstOrDefault(
-                    p =>
-                        p.Id == productId &&
-                        !p.IsDeleted);
+            var product = subCategory.Products.FirstOrDefault();
 
 
             if (product is null)
@@ -587,10 +570,25 @@ namespace PharmacyAPI.Services
             // UPDATE RELATIONSHIPS
             // -------------------------------------------------
 
-            subCategory.Products.Clear();
+            // Only remove/add the links that actually changed,
+            // instead of deleting and re-inserting all of them.
+            var newProductIds = products
+                .Select(p => p.Id)
+                .ToHashSet();
 
+            foreach (var existing in subCategory.Products
+                .Where(p => !newProductIds.Contains(p.Id))
+                .ToList())
+            {
+                subCategory.Products.Remove(existing);
+            }
 
-            foreach (var product in products)
+            var currentProductIds = subCategory.Products
+                .Select(p => p.Id)
+                .ToHashSet();
+
+            foreach (var product in products
+                .Where(p => !currentProductIds.Contains(p.Id)))
             {
                 subCategory.Products.Add(product);
             }

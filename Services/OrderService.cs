@@ -20,11 +20,11 @@ namespace PharmacyAPI.Services
             CancellationToken cancellationToken = default);
 
         Task<PagedResponse<OrderDto>> GetOrders(
-        int page = 1,
-        int pageSize = 100,
-        int? orderId = null,
-        OrderStatus? status = null,
-        CancellationToken cancellationToken = default);
+            int page = 1,
+            int pageSize = 100,
+            int? orderId = null,
+            OrderStatus? status = null,
+            CancellationToken cancellationToken = default);
 
         Task<List<OrderDto>> GetOrdersByClient(
             int clientId,
@@ -38,14 +38,14 @@ namespace PharmacyAPI.Services
         Task<bool> CancelOrder(
             int id,
             CancellationToken cancellationToken = default);
+
         Task<bool> CompleteOrder(
             int id,
             CancellationToken cancellationToken = default);
 
-
-        //dashboard services
+        // Dashboard
         Task<DashboardStatsDto> GetCurrentMonthStats(
-        CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default);
 
         Task<DashboardStatsDto> GetTotalStats(
             CancellationToken cancellationToken = default);
@@ -53,94 +53,95 @@ namespace PharmacyAPI.Services
 
     public class OrderService : IOrderService
     {
+        private const int MaxPageSize = 100;
+
+        private const string DefaultTimeZone = "Africa/Cairo";
+
+        private const string OrderConfirmedSms =
+            " شكرا لتواصلكم مع Avera تم تاكيد طلبكم ";
+
         private readonly PharmacyDbContext _context;
         private readonly SmsIntegrationService _smsService;
         private readonly IEmailService _emailService;
+        private readonly ILogger<OrderService> _logger;
+        private readonly string? _adminNotificationEmail;
+        private readonly TimeZoneInfo _timeZone;
 
-        public OrderService(PharmacyDbContext context, SmsIntegrationService smsService, IEmailService emailService)
+        public OrderService(
+            PharmacyDbContext context,
+            SmsIntegrationService smsService,
+            IEmailService emailService,
+            ILogger<OrderService> logger,
+            IConfiguration configuration)
         {
             _context = context;
             _smsService = smsService;
             _emailService = emailService;
-        }
-        public async Task<DashboardStatsDto> GetCurrentMonthStats(
-       CancellationToken cancellationToken = default)
-        {
-            var now = DateTime.Now;
+            _logger = logger;
 
-            var startDate = new DateTime(
-                now.Year,
-                now.Month,
-                1);
+            _adminNotificationEmail =
+                configuration["Orders:AdminNotificationEmail"];
 
-            var endDate = startDate.AddMonths(1);
-
-            var orders = _context.Orders
-                .AsNoTracking()
-                .Where(o =>
-                    o.Status != OrderStatus.Cancelled &&
-                    o.OrderDate >= startDate &&
-                    o.OrderDate < endDate);
-
-            var orderItems = _context.OrderItems
-                .AsNoTracking()
-                .Where(i =>
-                    i.Order.Status != OrderStatus.Cancelled &&
-                    i.Order.OrderDate >= startDate &&
-                    i.Order.OrderDate < endDate);
-
-            var ordersCount = await orders
-                .CountAsync(cancellationToken);
-
-            var sales = await orders
-                .SumAsync(
-                    o => o.TotalAmount,
-                    cancellationToken);
-
-            var gain = await orderItems
-                .SumAsync(
-                    i => (i.UnitPrice - i.ActualPrice) * i.Quantity,
-                    cancellationToken);
-
-            return new DashboardStatsDto
-            {
-                Orders = ordersCount,
-
-                Sales = Math.Round(
-                    sales,
-                    2,
-                    MidpointRounding.AwayFromZero),
-
-                Gain = Math.Round(
-                    gain,
-                    2,
-                    MidpointRounding.AwayFromZero)
-            };
+            // IANA ids (e.g. "Africa/Cairo") work on both Linux and Windows.
+            _timeZone = TimeZoneInfo.FindSystemTimeZoneById(
+                configuration["Orders:TimeZone"] ?? DefaultTimeZone);
         }
 
+        // =====================================================
+        // DASHBOARD
+        // =====================================================
 
-        public async Task<DashboardStatsDto> GetTotalStats(
+        public Task<DashboardStatsDto> GetCurrentMonthStats(
             CancellationToken cancellationToken = default)
         {
+            // Month boundaries are local to the business time zone,
+            // but OrderDate is stored in UTC, so convert them back.
+            var localNow = TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                _timeZone);
+
+            var localStart = new DateTime(
+                localNow.Year,
+                localNow.Month,
+                1,
+                0,
+                0,
+                0,
+                DateTimeKind.Unspecified);
+
+            var startDate = TimeZoneInfo.ConvertTimeToUtc(localStart, _timeZone);
+            var endDate = TimeZoneInfo.ConvertTimeToUtc(localStart.AddMonths(1), _timeZone);
+
+            return GetStats(
+                o => o.OrderDate >= startDate && o.OrderDate < endDate,
+                cancellationToken);
+        }
+
+        public Task<DashboardStatsDto> GetTotalStats(
+            CancellationToken cancellationToken = default)
+        {
+            return GetStats(null, cancellationToken);
+        }
+
+        private async Task<DashboardStatsDto> GetStats(
+            Expression<Func<Order, bool>>? filter,
+            CancellationToken cancellationToken)
+        {
             var orders = _context.Orders
                 .AsNoTracking()
-                .Where(o =>
-                    o.Status != OrderStatus.Cancelled);
+                .Where(o => o.Status != OrderStatus.Cancelled);
 
-            var orderItems = _context.OrderItems
-                .AsNoTracking()
-                .Where(i =>
-                    i.Order.Status != OrderStatus.Cancelled);
+            if (filter != null)
+                orders = orders.Where(filter);
 
-            var ordersCount = await orders
-                .CountAsync(cancellationToken);
+            var ordersCount = await orders.CountAsync(cancellationToken);
 
-            var sales = await orders
-                .SumAsync(
-                    o => o.TotalAmount,
-                    cancellationToken);
+            var sales = await orders.SumAsync(
+                o => o.TotalAmount,
+                cancellationToken);
 
-            var gain = await orderItems
+            var gain = await orders
+                .SelectMany(o => o.Items)
                 .SumAsync(
                     i => (i.UnitPrice - i.ActualPrice) * i.Quantity,
                     cancellationToken);
@@ -148,16 +149,8 @@ namespace PharmacyAPI.Services
             return new DashboardStatsDto
             {
                 Orders = ordersCount,
-
-                Sales = Math.Round(
-                    sales,
-                    2,
-                    MidpointRounding.AwayFromZero),
-
-                Gain = Math.Round(
-                    gain,
-                    2,
-                    MidpointRounding.AwayFromZero)
+                Sales = RoundMoney(sales),
+                Gain = RoundMoney(gain)
             };
         }
 
@@ -165,200 +158,133 @@ namespace PharmacyAPI.Services
         // CREATE ORDER
         // =====================================================
 
-        //public async Task<Order> CreateOrder(
-        //    CreateOrderDto dto,
-        //    CancellationToken cancellationToken = default)
-        //{
-        //    if (dto.Client == null)
-        //    {
-        //        throw new InvalidOperationException(
-        //            "معلومات العميل غير متوفره.");
-        //    }
-
-        //    if (string.IsNullOrWhiteSpace(dto.Client.PhoneNumber))
-        //    {
-        //        throw new InvalidOperationException(
-        //            "رقم العميل مطلوب");
-        //    }
-
-        //    if (dto.Items == null || dto.Items.Count == 0)
-        //    {
-        //        throw new InvalidOperationException(
-        //            "الطلب يجب ان يحتوي علي الاقل علي منتج واحد");
-        //    }
-
-        //    // =================================================
-        //    // VALIDATE ITEMS
-        //    // =================================================
-
-        //    foreach (var item in dto.Items)
-        //    {
-        //        if (item.Quantity <= 0)
-        //        {
-        //            throw new InvalidOperationException(
-        //                "الكميه يجب ان تكون اكبر من الصفر ");
-        //        }
-
-        //        if (item.ProductId <= 0)
-        //        {
-        //            throw new InvalidOperationException(
-        //                "منتج غير متوفر.");
-        //        }
-        //    }
-
-        //    // =================================================
-        //    // GET ALL PRODUCTS IN ONE QUERY
-        //    //
-        //    // Prevents N+1 queries.
-        //    // =================================================
-
-        //    var productIds = dto.Items
-        //        .Select(x => x.ProductId)
-        //        .Distinct()
-        //        .ToList();
-
-        //    var products = await _context.Products
-        //        .AsNoTracking()
-        //        .Where(p =>
-        //            productIds.Contains(p.Id) &&
-        //            !p.IsDeleted)
-        //        .ToDictionaryAsync(
-        //            p => p.Id,
-        //            cancellationToken);
-
-        //    // =================================================
-        //    // CHECK ALL PRODUCTS EXIST
-        //    // =================================================
-
-        //    if (products.Count != productIds.Count)
-        //    {
-        //        var missingProductId = productIds
-        //            .First(id => !products.ContainsKey(id));
-
-        //        throw new KeyNotFoundException(
-        //            $"المنتج {missingProductId} غير موجود.");
-        //    }
-
-        //    // =================================================
-        //    // FIND CLIENT
-        //    // =================================================
-
-        //    var phoneNumber = dto.Client.PhoneNumber.Trim();
-
-        //    var client = await _context.Clients
-        //        .FirstOrDefaultAsync(
-        //            x => x.PhoneNumber == phoneNumber,
-        //            cancellationToken);
-
-        //    var now = DateTime.UtcNow;
-
-        //    // =================================================
-        //    // CREATE CLIENT IF NEEDED
-        //    // =================================================
-
-        //    if (client == null)
-        //    {
-        //        client = new Client
-        //        {
-        //            Name = dto.Client.Name?.Trim(),
-        //            PhoneNumber = phoneNumber,
-        //            Address = dto.Client.Address?.Trim(),
-        //            Email = string.IsNullOrWhiteSpace(dto.Client.Email)
-        //                ? null
-        //                : dto.Client.Email.Trim(),
-        //            CreatedAt = now
-        //        };
-
-        //        _context.Clients.Add(client);
-
-        //        // Client.Id is generated by SQL Server,
-        //        // therefore save it before using ClientId.
-        //        await _context.SaveChangesAsync(cancellationToken);
-        //    }
-        //    else
-        //    {
-        //        client.Name = dto.Client.Name?.Trim();
-        //        client.Address = dto.Client.Address?.Trim();
-
-        //        client.Email =
-        //            string.IsNullOrWhiteSpace(dto.Client.Email)
-        //                ? null
-        //                : dto.Client.Email.Trim();
-
-        //        client.UpdatedAt = now;
-        //    }
-
-        //    // =================================================
-        //    // CREATE ORDER
-        //    // =================================================
-
-        //    var order = new Order
-        //    {
-        //        ClientId = client.Id,
-        //        OrderDate = now,
-        //        Status = OrderStatus.Confirmed,
-        //        TotalAmount = 0,
-        //        Items = new List<OrderItem>()
-        //    };
-
-        //    decimal total = 0;
-
-        //    // =================================================
-        //    // CREATE ORDER ITEMS
-        //    // =================================================
-
-        //    foreach (var itemDto in dto.Items)
-        //    {
-        //        var product = products[itemDto.ProductId];
-
-        //        var unitPrice = product.Price;
-
-        //        var subtotal =
-        //            unitPrice * itemDto.Quantity;
-
-        //        total += subtotal;
-
-        //        order.Items.Add(
-        //            new OrderItem
-        //            {
-        //                ProductId = product.Id,
-        //                Quantity = itemDto.Quantity,
-        //                UnitPrice = unitPrice
-        //            });
-        //    }
-
-        //    order.TotalAmount = total;
-
-        //    // =================================================
-        //    // SAVE ORDER
-        //    // =================================================
-
-        //    _context.Orders.Add(order);
-
-        //    await _context.SaveChangesAsync(
-        //        cancellationToken);
-
-        //    return order;
-        //}
-
-        public async Task<bool> SendMsg(string phone,string msg)
-            {
-
-            return await _smsService.SendMessageAsync(
-                phone,
-                msg,
-                CancellationToken.None) != null;
-        }
-
-
         public async Task<Order> CreateOrder(
             CreateOrderDto dto,
             CancellationToken cancellationToken = default)
         {
-            // =====================================================
-            // VALIDATE REQUEST
-            // =====================================================
+            ValidateCreateOrderRequest(dto);
 
+            // Combine duplicate products into a single line.
+            var requestedItems = dto.OrderRequest.Items
+                .GroupBy(x => x.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    Quantity = g.Sum(x => x.Quantity)
+                })
+                .ToList();
+
+            var productIds = requestedItems
+                .Select(x => x.ProductId)
+                .ToList();
+
+            var products = await _context.Products
+                .AsNoTracking()
+                .Where(p => productIds.Contains(p.Id) && !p.IsDeleted)
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+
+            if (products.Count != productIds.Count)
+            {
+                var missingProductId = productIds
+                    .First(id => !products.ContainsKey(id));
+
+                throw new KeyNotFoundException(
+                    $"المنتج {missingProductId} غير موجود.");
+            }
+
+            // =================================================
+            // CALCULATE TOTAL USING DATABASE PRICES
+            // =================================================
+
+            decimal total = 0;
+            var orderItems = new List<OrderItem>(requestedItems.Count);
+
+            foreach (var requestedItem in requestedItems)
+            {
+                var product = products[requestedItem.ProductId];
+                var unitPrice = CalculateUnitPrice(product);
+
+                total += unitPrice * requestedItem.Quantity;
+
+                orderItems.Add(new OrderItem
+                {
+                    ActualPrice = product.ActualPrice,
+                    ProductId = product.Id,
+                    Quantity = requestedItem.Quantity,
+                    UnitPrice = unitPrice
+                });
+            }
+
+            var currentTotal = RoundMoney(total);
+            var clientTotal = RoundMoney(dto.OrderRequest.ClientTotal);
+
+            // Reject if prices changed since the client loaded them.
+            if (clientTotal != currentTotal)
+            {
+                throw new InvalidOperationException(
+                    "حدث تغير في الاسعار من فضلك راجع الاسعار مره اخري ");
+            }
+
+            // =================================================
+            // FIND OR CREATE CLIENT
+            // =================================================
+
+            var phoneNumber = dto.Client.PhoneNumber.Trim();
+            var now = DateTime.UtcNow;
+
+            var client = await _context.Clients
+                .FirstOrDefaultAsync(
+                    x => x.PhoneNumber == phoneNumber,
+                    cancellationToken);
+
+            if (client == null)
+            {
+                client = new Client
+                {
+                    PhoneNumber = phoneNumber,
+                    CreatedAt = now
+                };
+
+                _context.Clients.Add(client);
+            }
+            else
+            {
+                client.UpdatedAt = now;
+            }
+
+            client.Name = dto.Client.Name.Trim();
+            client.Address = dto.Client.Address!.Trim();
+            client.governorate = dto.Client.governorate!.Trim();
+            client.Email = NormalizeOptional(dto.Client.Email);
+
+            // =================================================
+            // CREATE ORDER
+            //
+            // Client and order are saved in a single
+            // SaveChanges call, which EF runs in one transaction.
+            // =================================================
+
+            var order = new Order
+            {
+                Client = client,
+                OrderDate = now,
+                Status = OrderStatus.Pending,
+                TotalAmount = currentTotal,
+                Items = orderItems
+            };
+
+            _context.Orders.Add(order);
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Notify admin without delaying the response.
+            _ = SendNewOrderEmailAsync(client, products, order);
+
+            return order;
+        }
+
+        private static void ValidateCreateOrderRequest(CreateOrderDto dto)
+        {
             if (dto.Client == null)
                 throw new InvalidOperationException("معلومات العميل غير متوفره.");
 
@@ -382,14 +308,7 @@ namespace PharmacyAPI.Services
             }
 
             if (dto.OrderRequest.ClientTotal < 0)
-            {
-                throw new InvalidOperationException(
-                    "إجمالي الطلب غير صحيح.");
-            }
-
-            // =====================================================
-            // VALIDATE ITEM QUANTITIES
-            // =====================================================
+                throw new InvalidOperationException("إجمالي الطلب غير صحيح.");
 
             foreach (var item in dto.OrderRequest.Items)
             {
@@ -400,641 +319,56 @@ namespace PharmacyAPI.Services
                     throw new InvalidOperationException(
                         "الكميه يجب ان تكون اكبر من الصفر.");
             }
-
-            // =====================================================
-            // COMBINE DUPLICATE PRODUCTS
-            // =====================================================
-
-            var requestedItems = dto.OrderRequest.Items
-                .GroupBy(x => x.ProductId)
-                .Select(g => new
-                {
-                    ProductId = g.Key,
-                    Quantity = g.Sum(x => x.Quantity)
-                })
-                .ToList();
-
-            // =====================================================
-            // LOAD CURRENT PRODUCTS AND PRICES
-            // =====================================================
-
-            var productIds = requestedItems
-                .Select(x => x.ProductId)
-                .ToList();
-
-            var products = await _context.Products
-                .AsNoTracking()
-                .Where(p =>
-                    productIds.Contains(p.Id) &&
-                    !p.IsDeleted)
-                .ToDictionaryAsync(
-                    p => p.Id,
-                    cancellationToken);
-
-            if (products.Count != productIds.Count)
-            {
-                var missingProductId = productIds
-                    .First(id => !products.ContainsKey(id));
-
-                throw new KeyNotFoundException(
-                    $"المنتج {missingProductId} غير موجود.");
-            }
-
-            // =====================================================
-            // CALCULATE TOTAL USING DATABASE PRICES
-            // =====================================================
-
-            decimal total = 0;
-
-            var orderItems = new List<OrderItem>();
-
-            foreach (var requestedItem in requestedItems)
-            {
-                var product = products[requestedItem.ProductId];
-
-                var originalPrice = product.Price;
-                var discount = product.DiscountPercentage;
-
-                decimal unitPrice;
-
-                if (discount > 0)
-                {
-                    unitPrice = originalPrice -
-                        (originalPrice * discount / 100m);
-                }
-                else
-                {
-                    unitPrice = originalPrice;
-                }
-
-                // Match the frontend's unit-price rounding.
-                unitPrice = Math.Round(
-                    unitPrice,
-                    2,
-                    MidpointRounding.AwayFromZero);
-
-                var subtotal = unitPrice * requestedItem.Quantity;
-
-                total += subtotal;
-
-                orderItems.Add(new OrderItem
-                {
-                    ActualPrice = product.ActualPrice,
-                    ProductId = product.Id,
-                    Quantity = requestedItem.Quantity,
-                    UnitPrice = unitPrice
-                });
-            }
-
-            var currentTotal = Math.Round(
-                total,
-                2,
-                MidpointRounding.AwayFromZero);
-
-            var clientTotal = Math.Round(
-                dto.OrderRequest.ClientTotal,
-                2,
-                MidpointRounding.AwayFromZero);
-
-            // =====================================================
-            // REJECT IF PRICE CHANGED
-            // =====================================================
-
-            if (clientTotal != currentTotal)
-            {
-                throw new InvalidOperationException("حدث تغير في الاسعار من فضلك راجع الاسعار مره اخري ");
-            }
-
-            // =====================================================
-            // START TRANSACTION AFTER PRICE VALIDATION
-            // =====================================================
-
-            await using var transaction =
-                await _context.Database.BeginTransactionAsync(
-                    cancellationToken);
-
-            try
-            {
-                var phoneNumber = dto.Client.PhoneNumber.Trim();
-                var now = DateTime.UtcNow;
-
-                // =================================================
-                // FIND OR CREATE CLIENT
-                // =================================================
-
-                var client = await _context.Clients
-                    .FirstOrDefaultAsync(
-                        x => x.PhoneNumber == phoneNumber,
-                        cancellationToken);
-
-                if (client == null)
-                {
-                    client = new Client
-                    {
-                        Name = dto.Client.Name.Trim(),
-                        PhoneNumber = phoneNumber,
-                        Address = dto.Client.Address.Trim(),
-                        governorate = dto.Client.governorate.Trim(),
-                        Email = string.IsNullOrWhiteSpace(dto.Client.Email)
-                            ? null
-                            : dto.Client.Email.Trim(),
-                        CreatedAt = now
-                    };
-
-                    _context.Clients.Add(client);
-                    await _context.SaveChangesAsync(cancellationToken);
-                }
-                else
-                {
-                    client.Name = dto.Client.Name.Trim();
-                    client.Address = dto.Client.Address.Trim();
-                    client.governorate = dto.Client.governorate.Trim();
-
-                    client.Email = string.IsNullOrWhiteSpace(dto.Client.Email)
-                        ? null
-                        : dto.Client.Email.Trim();
-
-                    client.UpdatedAt = now;
-
-                    await _context.SaveChangesAsync(cancellationToken);
-                }
-
-                // =================================================
-                // CREATE ORDER
-                // =================================================
-
-                var order = new Order
-                {
-                    ClientId = client.Id,
-                    OrderDate = now,
-                    Status = OrderStatus.Pending,
-                    TotalAmount = currentTotal,
-                    Items = orderItems
-                };
-
-                _context.Orders.Add(order);
-
-                await _context.SaveChangesAsync(cancellationToken);
-
-                // =================================================
-                // COMMIT
-                // =================================================
-
-                await transaction.CommitAsync(cancellationToken);
-
-
-                //send email to admin
-                try
-                {
-                    Email(client, products, order);
-                }
-                catch (Exception ex)
-                {
-                    // Log the exception or handle it as needed
-                    Console.WriteLine($"Failed to send email: {ex.Message}");
-                }
-
-
-
-                return order;
-            }
-            catch
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw;
-            }
         }
 
-
-
-
-        //       public async Task<Order> CreateOrder(
-        //   CreateOrderDto dto,
-        //   CancellationToken cancellationToken = default)
-        //       {
-        //           // =====================================================
-        //           // VALIDATE REQUEST
-        //           // =====================================================
-
-        //           if (dto.Client == null)
-        //           {
-        //               throw new InvalidOperationException(
-        //                   "معلومات العميل غير متوفره.");
-        //           }
-
-        //           if (string.IsNullOrWhiteSpace(dto.Client.Name))
-        //           {
-        //               throw new InvalidOperationException(
-        //                   "اسم العميل مطلوب.");
-        //           }
-
-        //           if (string.IsNullOrWhiteSpace(dto.Client.PhoneNumber))
-        //           {
-        //               throw new InvalidOperationException(
-        //                   "رقم العميل مطلوب.");
-        //           }
-
-        //           if (string.IsNullOrWhiteSpace(dto.Client.Address))
-        //           {
-        //               throw new InvalidOperationException(
-        //                   "عنوان العميل مطلوب.");
-        //           }
-        //           if (string.IsNullOrWhiteSpace(dto.Client.governorate))
-        //           {
-        //               throw new InvalidOperationException(
-        //                   "محافظة العميل مطلوب.");
-        //           }
-
-        //           if (dto.OrderRequest.Items == null || dto.OrderRequest.Items.Count == 0)
-        //           {
-        //               throw new InvalidOperationException(
-        //                   "الطلب يجب ان يحتوي علي الاقل علي منتج واحد.");
-        //           }
-
-
-        //           // =====================================================
-        //           // VALIDATE ITEM QUANTITIES
-        //           // =====================================================
-
-        //           foreach (var item in dto.OrderRequest.Items)
-        //           {
-        //               if (item.ProductId <= 0)
-        //               {
-        //                   throw new InvalidOperationException(
-        //                       "منتج غير متوفر.");
-        //               }
-
-        //               if (item.Quantity <= 0)
-        //               {
-        //                   throw new InvalidOperationException(
-        //                       "الكميه يجب ان تكون اكبر من الصفر.");
-        //               }
-        //           }
-
-
-        //           // =====================================================
-        //           // PREVENT DUPLICATE PRODUCTS
-        //           // =====================================================
-        //           //
-        //           // If the same product is sent twice:
-        //           //
-        //           // product 10 -> quantity 2
-        //           // product 10 -> quantity 3
-        //           //
-        //           // It becomes:
-        //           //
-        //           // product 10 -> quantity 5
-        //           //
-        //           // =====================================================
-
-        //           var requestedItems = dto.OrderRequest.Items
-        //               .GroupBy(x => x.ProductId)
-        //               .Select(g => new
-        //               {
-        //                   ProductId = g.Key,
-        //                   Quantity = g.Sum(x => x.Quantity)
-        //               })
-        //               .ToList();
-
-
-        //           // =====================================================
-        //           // GET PRODUCTS
-        //           // =====================================================
-
-        //           var productIds = requestedItems
-        //               .Select(x => x.ProductId)
-        //               .ToList();
-
-        //           var products = await _context.Products
-        //               .AsNoTracking()
-        //               .Where(p =>
-        //                   productIds.Contains(p.Id) &&
-        //                   !p.IsDeleted)
-        //               .ToDictionaryAsync(
-        //                   p => p.Id,
-        //                   cancellationToken);
-
-
-        //           // =====================================================
-        //           // CHECK ALL PRODUCTS EXIST
-        //           // =====================================================
-
-        //           if (products.Count != productIds.Count)
-        //           {
-        //               var missingProductId = productIds
-        //                   .First(id => !products.ContainsKey(id));
-
-        //               throw new KeyNotFoundException(
-        //                   $"المنتج {missingProductId} غير موجود.");
-        //           }
-
-
-        //           // =====================================================
-        //           // FIND CLIENT
-        //           // =====================================================
-
-        //           var phoneNumber =
-        //               dto.Client.PhoneNumber.Trim();
-
-        //           var now =
-        //               DateTime.UtcNow;
-
-        //           var client = await _context.Clients
-        //               .FirstOrDefaultAsync(
-        //                   x => x.PhoneNumber == phoneNumber,
-        //                   cancellationToken);
-
-
-        //           // =====================================================
-        //           // START TRANSACTION
-        //           // =====================================================
-
-        //           await using var transaction =
-        //               await _context.Database.BeginTransactionAsync(
-        //                   cancellationToken);
-
-        //           try
-        //           {
-        //               // =================================================
-        //               // CREATE CLIENT
-        //               // =================================================
-
-        //               if (client == null)
-        //               {
-        //                   client = new Client
-        //                   {
-        //                       Name = dto.Client.Name.Trim(),
-
-        //                       PhoneNumber =
-        //                           phoneNumber,
-
-        //                       Address =
-        //                           dto.Client.Address.Trim(),
-
-        //                       governorate =
-
-        //                           dto.Client.governorate.Trim(),
-        //                       Email =
-        //                           string.IsNullOrWhiteSpace(
-        //                               dto.Client.Email)
-        //                               ? null
-        //                               : dto.Client.Email.Trim(),
-
-        //                       CreatedAt = now
-        //                   };
-
-        //                   _context.Clients.Add(client);
-
-        //                   await _context.SaveChangesAsync(
-        //                       cancellationToken);
-        //               }
-        //               else
-        //               {
-        //                   // =============================================
-        //                   // UPDATE EXISTING CLIENT
-        //                   // =============================================
-
-        //                   client.Name =
-        //                       dto.Client.Name.Trim();
-
-        //                   client.Address =
-        //                       dto.Client.Address.Trim();
-        //                   client.governorate =
-        //                      dto.Client.governorate.Trim();    
-
-        //                   client.Email =
-        //                       string.IsNullOrWhiteSpace(
-        //                           dto.Client.Email)
-        //                           ? null
-        //                           : dto.Client.Email.Trim();
-
-        //                   client.UpdatedAt = now;
-
-        //                   await _context.SaveChangesAsync(
-        //                       cancellationToken);
-        //               }
-
-
-        //               // =================================================
-        //               // CREATE ORDER
-        //               // =================================================
-
-        //               var order = new Order
-        //               {
-        //                   ClientId =
-        //                       client.Id,
-
-        //                   OrderDate =
-        //                       now,
-
-        //                   Status =
-        //                       OrderStatus.Pending,
-
-        //                   TotalAmount =
-        //                       0,
-
-        //                   Items =
-        //                       new List<OrderItem>()
-        //               };
-
-
-        //               decimal total = 0;
-
-
-        //               // =================================================
-        //               // CREATE ORDER ITEMS
-        //               // =================================================
-
-        //               foreach (var requestedItem in requestedItems)
-        //               {
-        //                   var product =
-        //                       products[requestedItem.ProductId];
-
-
-        //                   // =============================================
-        //                   // GET ORIGINAL PRICE
-        //                   // =============================================
-
-        //                   var originalPrice =
-        //                       product.Price;
-
-
-        //                   // =============================================
-        //                   // GET DISCOUNT
-        //                   // =============================================
-
-        //                   var discount =
-        //                       product.DiscountPercentage;
-
-
-        //                   // =============================================
-        //                   // CALCULATE FINAL PRICE
-        //                   // =============================================
-
-        //                   decimal unitPrice;
-
-        //                   if (discount > 0)
-        //                   {
-        //                       unitPrice =
-        //                           originalPrice -
-        //                           (
-        //                               originalPrice *
-        //                               discount /
-        //                               100
-        //                           );
-        //                   }
-        //                   else
-        //                   {
-        //                       unitPrice =
-        //                           originalPrice;
-        //                   }
-
-
-        //                   // =============================================
-        //                   // ROUND MONEY TO 2 DECIMAL PLACES
-        //                   // =============================================
-
-        //                   unitPrice =
-        //                       Math.Round(
-        //                           unitPrice,
-        //                           2,
-        //                           MidpointRounding.AwayFromZero);
-
-
-        //                   // =============================================
-        //                   // ITEM TOTAL
-        //                   // =============================================
-
-        //                   var subtotal =
-        //                       unitPrice *
-        //                       requestedItem.Quantity;
-
-
-        //                   total += subtotal;
-
-
-        //                   // =============================================
-        //                   // ADD ORDER ITEM
-        //                   // =============================================
-
-        //                   order.Items.Add(
-        //                       new OrderItem
-        //                       {
-        //                           ActualPrice=product.ActualPrice,
-        //                           ProductId =
-        //                               product.Id,
-
-        //                           Quantity =
-        //                               requestedItem.Quantity,
-
-        //                           UnitPrice =
-        //                               unitPrice
-        //                       });
-        //               }
-
-
-        //               // =================================================
-        //               // FINAL TOTAL
-        //               // =================================================
-
-        //               order.TotalAmount =
-        //                   Math.Round(
-        //                       total,
-        //                       2,
-        //                       MidpointRounding.AwayFromZero);
-        //               if(order.TotalAmount != dto.OrderRequest.ClientTotal)
-        //               {
-
-        //                   throw new InvalidOperationException(
-        //                  "حدث تغير في الاسعار برجاء مراجعه الطلب مره اخري  .");
-        //               }
-
-
-        //               // =================================================
-        //               // SAVE ORDER
-        //               // =================================================
-
-        //               _context.Orders.Add(order);
-
-        //               await _context.SaveChangesAsync(
-        //                   cancellationToken);
-
-        ////  SendMsg(client.PhoneNumber,"order sent");
-        //               // =================================================
-        //               // COMMIT
-        //               // =================================================
-
-        //               await transaction.CommitAsync(
-        //                   cancellationToken);
-
-
-        //               return order;
-        //           }
-        //           catch
-        //           {
-        //               await transaction.RollbackAsync(
-        //                   cancellationToken);
-
-        //               throw;
-        //           }
-        //       }
-
-
+        private static decimal CalculateUnitPrice(Product product)
+        {
+            var originalPrice = product.Price;
+            var discount = product.DiscountPercentage;
+
+            var unitPrice = discount > 0
+                ? originalPrice - (originalPrice * discount / 100m)
+                : originalPrice;
+
+            // Match the frontend's unit-price rounding.
+            return RoundMoney(unitPrice);
+        }
 
         // =====================================================
         // GET ALL ORDERS
         // =====================================================
 
         public async Task<PagedResponse<OrderDto>> GetOrders(
-       int page = 1,
-       int pageSize = 100,
-       int? orderId = null,
-       OrderStatus? status = null,
-       CancellationToken cancellationToken = default)
+            int page = 1,
+            int pageSize = 100,
+            int? orderId = null,
+            OrderStatus? status = null,
+            CancellationToken cancellationToken = default)
         {
             page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
-            pageSize = Math.Clamp(
-                pageSize,
-                1,
-                100);
+            var query = _context.Orders.AsNoTracking();
 
-            var query =
-                _context.Orders
-                    .AsNoTracking();
-
-            // Order ID filter
             if (orderId.HasValue)
-            {
-                query = query.Where(
-                    o => o.Id == orderId.Value
-                );
-            }
+                query = query.Where(o => o.Id == orderId.Value);
 
-            // Status filter
             if (status.HasValue)
-            {
-                query = query.Where(
-                    o => o.Status == status.Value
-                );
-            }
+                query = query.Where(o => o.Status == status.Value);
 
-            var items =
-                await query
-                    .OrderByDescending(o => o.OrderDate)
-                    .ThenByDescending(o => o.Id)
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize + 1)
-                    .Select(OrderProjection())
-                    .ToListAsync(cancellationToken);
+            // Fetch one extra row to know whether another page exists.
+            var items = await query
+                .OrderByDescending(o => o.OrderDate)
+                .ThenByDescending(o => o.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize + 1)
+                .Select(OrderProjection)
+                .ToListAsync(cancellationToken);
 
-            var hasMore =
-                items.Count > pageSize;
+            var hasMore = items.Count > pageSize;
 
             if (hasMore)
-            {
                 items.RemoveAt(items.Count - 1);
-            }
 
             return new PagedResponse<OrderDto>
             {
@@ -1044,44 +378,19 @@ namespace PharmacyAPI.Services
                 HasMore = hasMore
             };
         }
-        //public async Task<PagedResponse<OrderDto>> GetOrders(int page = 1, int pageSize = 30,
-        //    CancellationToken cancellationToken = default) 
-        //{
-        //    page = Math.Max(page, 1);
-        //    pageSize = Math.Clamp(pageSize, 1, 100); 
-        //    var items = await _context.Orders.AsNoTracking().OrderByDescending(o => o.OrderDate)
-        //        .Skip((page - 1) * pageSize).Take(pageSize + 1).Select(OrderProjection())
-        //        .ToListAsync(cancellationToken); 
-        //    var hasMore = items.Count > pageSize; 
-        //    if (hasMore) { items.RemoveAt(items.Count - 1); }
-        //    return new PagedResponse<OrderDto> 
-        //{ Items = items, Page = page, PageSize = pageSize, HasMore = hasMore }; }
-
-
-
-
-        //public async Task<List<OrderDto>> GetOrders(
-        //    CancellationToken cancellationToken = default)
-        //{
-        //    return await _context.Orders
-        //        .AsNoTracking()
-        //        .OrderByDescending(o => o.OrderDate)
-        //        .Select(OrderProjection())
-        //        .ToListAsync(cancellationToken);
-        //}
 
         // =====================================================
         // GET ORDER BY ID
         // =====================================================
 
-        public async Task<OrderDto?> GetOrder(
+        public Task<OrderDto?> GetOrder(
             int id,
             CancellationToken cancellationToken = default)
         {
-            return await _context.Orders
+            return _context.Orders
                 .AsNoTracking()
                 .Where(o => o.Id == id)
-                .Select(OrderProjection())
+                .Select(OrderProjection)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -1089,15 +398,15 @@ namespace PharmacyAPI.Services
         // GET ORDERS BY CLIENT
         // =====================================================
 
-        public async Task<List<OrderDto>> GetOrdersByClient(
+        public Task<List<OrderDto>> GetOrdersByClient(
             int clientId,
             CancellationToken cancellationToken = default)
         {
-            return await _context.Orders
+            return _context.Orders
                 .AsNoTracking()
                 .Where(o => o.ClientId == clientId)
                 .OrderByDescending(o => o.OrderDate)
-                .Select(OrderProjection())
+                .Select(OrderProjection)
                 .ToListAsync(cancellationToken);
         }
 
@@ -1111,36 +420,17 @@ namespace PharmacyAPI.Services
             CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(status))
-            {
-                throw new InvalidOperationException(
-                    "حاله المنتج غير متوفره");
-            }
+                throw new InvalidOperationException("حاله المنتج غير متوفره");
 
-            if (!Enum.TryParse<OrderStatus>(
-                    status.Trim(),
-                    true,
-                    out var orderStatus))
-            {
-                throw new InvalidOperationException(
-                    "حاله المنتج ليست مدعومه");
-            }
+            if (!Enum.TryParse<OrderStatus>(status.Trim(), true, out var orderStatus))
+                throw new InvalidOperationException("حاله المنتج ليست مدعومه");
 
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(
-                    o => o.Id == id,
-                    cancellationToken);
+            var order = await FindOrderAsync(id, cancellationToken);
 
             if (order == null)
                 return false;
 
-            // Nothing to update
-            if (order.Status == orderStatus)
-                return true;
-
-            order.Status = orderStatus;
-
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            await SetStatusAsync(order, orderStatus, cancellationToken);
 
             return true;
         }
@@ -1153,28 +443,15 @@ namespace PharmacyAPI.Services
             int id,
             CancellationToken cancellationToken = default)
         {
-            // No Include(Items) needed.
-            // We only change the order status.
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(
-                    o => o.Id == id,
-                    cancellationToken);
+            var order = await FindOrderAsync(id, cancellationToken);
 
             if (order == null)
                 return false;
 
-            // Already cancelled
-            if (order.Status == OrderStatus.Cancelled)
-                return true;
-
-            order.Status = OrderStatus.Cancelled;
-
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            await SetStatusAsync(order, OrderStatus.Cancelled, cancellationToken);
 
             return true;
         }
-
 
         // =====================================================
         // COMPLETE ORDER
@@ -1184,35 +461,62 @@ namespace PharmacyAPI.Services
             int id,
             CancellationToken cancellationToken = default)
         {
-            // No Include(Items) needed.
-            // We only change the order status.
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(
-                    o => o.Id == id,
-                    cancellationToken);
+            var order = await FindOrderAsync(id, cancellationToken);
 
             if (order == null)
                 return false;
-            var client=await _context.Clients
-                .FirstOrDefaultAsync(
-                    c => c.Id == order.ClientId,
-                    cancellationToken);
 
-            // Already cancelled
+            // Already confirmed
             if (order.Status == OrderStatus.Confirmed)
                 return true;
 
-            order.Status = OrderStatus.Confirmed;
+            await SetStatusAsync(order, OrderStatus.Confirmed, cancellationToken);
 
-            await _context.SaveChangesAsync(
-                cancellationToken);
+            var phoneNumber = await _context.Clients
+                .AsNoTracking()
+                .Where(c => c.Id == order.ClientId)
+                .Select(c => c.PhoneNumber)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            SendMsg(client.PhoneNumber, " شكرا لتواصلكم مع Avera تم تاكيد طلبكم ");
+            // Notify client without delaying the response.
+            if (!string.IsNullOrWhiteSpace(phoneNumber))
+                _ = SendSmsAsync(phoneNumber, OrderConfirmedSms);
 
             return true;
         }
 
+        // =====================================================
+        // HELPERS
+        // =====================================================
 
+        // No Include(Items) needed; only the order status changes.
+        private Task<Order?> FindOrderAsync(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            return _context.Orders.FirstOrDefaultAsync(
+                o => o.Id == id,
+                cancellationToken);
+        }
+
+        private async Task SetStatusAsync(
+            Order order,
+            OrderStatus status,
+            CancellationToken cancellationToken)
+        {
+            if (order.Status == status)
+                return;
+
+            order.Status = status;
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        private static decimal RoundMoney(decimal value) =>
+            Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+        private static string? NormalizeOptional(string? value) =>
+            string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
         // =====================================================
         // ORDER PROJECTION
@@ -1221,74 +525,105 @@ namespace PharmacyAPI.Services
         // No Include() is required.
         // =====================================================
 
-        private static Expression<Func<Order, OrderDto>>
-            OrderProjection()
-        {
-            return o => new OrderDto
+        private static readonly Expression<Func<Order, OrderDto>> OrderProjection =
+            o => new OrderDto
             {
                 Id = o.Id,
-
                 ClientId = o.ClientId,
-
                 ClientName = o.Client.Name,
-
                 PhoneNumber = o.Client.PhoneNumber,
-
                 Email = o.Client.Email,
-
                 Address = o.Client.Address,
                 governorate = o.Client.governorate,
-
                 OrderDate = o.OrderDate,
-
                 TotalAmount = o.TotalAmount,
-
                 Status = o.Status.ToString(),
-
                 Items = o.Items
                     .Select(i => new OrderItemDto
                     {
                         Id = i.Id,
-
                         ProductId = i.ProductId,
-
                         ProductName = i.Product.NameEn,
-
                         ImageUrl = i.Product.ImageUrl,
-
                         Quantity = i.Quantity,
-
                         UnitPrice = i.UnitPrice,
-
-                        TotalPrice =
-                            i.UnitPrice * i.Quantity
+                        TotalPrice = i.UnitPrice * i.Quantity
                     })
                     .ToList()
             };
-        }
 
+        // =====================================================
+        // NOTIFICATIONS
+        //
+        // Fire-and-forget: failures are logged and never
+        // affect the order operation that triggered them.
+        // =====================================================
 
-
-        public async void Email(Client client, Dictionary<int, Product> products, Order order)
+        private async Task SendSmsAsync(string phone, string message)
         {
-
-            // SEND ORDER EMAIL
             try
             {
-                var itemsHtml = new StringBuilder();
+                await _smsService.SendMessageAsync(
+                    phone,
+                    message,
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SMS to {Phone}.", phone);
+            }
+        }
 
-                foreach (var item in order.Items)
-                {
-                    var product = products[item.ProductId];
-                    var subtotal = item.UnitPrice * item.Quantity;
+        private async Task SendNewOrderEmailAsync(
+            Client client,
+            Dictionary<int, Product> products,
+            Order order)
+        {
+            if (string.IsNullOrWhiteSpace(_adminNotificationEmail))
+            {
+                _logger.LogWarning(
+                    "Orders:AdminNotificationEmail is not configured; " +
+                    "skipping email for order {OrderId}.",
+                    order.Id);
 
-                   
+                return;
+            }
 
-                    itemsHtml.Append($@"
+            try
+            {
+                var emailBody = BuildNewOrderEmailBody(client, products, order);
+
+                await _emailService.SendEmailAsync(
+                    _adminNotificationEmail,
+                    $"إشعار طلب جديد رقم #{order.Id}",
+                    emailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to send order email for order {OrderId}.",
+                    order.Id);
+            }
+        }
+
+        private static string BuildNewOrderEmailBody(
+            Client client,
+            Dictionary<int, Product> products,
+            Order order)
+        {
+            var itemsHtml = new StringBuilder();
+
+            foreach (var item in order.Items)
+            {
+                var product = products[item.ProductId];
+                var subtotal = item.UnitPrice * item.Quantity;
+
+                itemsHtml.Append($@"
                 <tr>
                     <td style='padding:14px 10px;border-bottom:1px solid #e2e8f0;'>
                         <strong>{WebUtility.HtmlEncode(product.NameAr)}</strong>
-                        
+
                     </td>
                     <td style='padding:14px 6px;text-align:center;border-bottom:1px solid #e2e8f0;'>
                         {item.Quantity}
@@ -1300,26 +635,18 @@ namespace PharmacyAPI.Services
                         {subtotal:N2}
                     </td>
                 </tr>");
-                }
+            }
 
-                var clientNameHtml =
-                    WebUtility.HtmlEncode(client.Name ?? "");
+            var clientNameHtml = WebUtility.HtmlEncode(client.Name ?? "");
+            var clientPhoneHtml = WebUtility.HtmlEncode(client.PhoneNumber ?? "");
+            var clientAddressHtml = WebUtility.HtmlEncode(client.Address ?? "");
 
-                var clientPhoneHtml =
-                    WebUtility.HtmlEncode(client.PhoneNumber ?? "");
+            var clientEmailHtml = WebUtility.HtmlEncode(
+                string.IsNullOrWhiteSpace(client.Email)
+                    ? "غير مسجل"
+                    : client.Email);
 
-                var clientAddressHtml =
-                    WebUtility.HtmlEncode(client.Address ?? "");
-
-                var clientEmailHtml =
-                    WebUtility.HtmlEncode(
-                        string.IsNullOrWhiteSpace(client.Email)
-                            ? "غير مسجل"
-                            : client.Email);
-
-               
-
-                var emailBody = $@"
+            return $@"
 <!DOCTYPE html>
 <html lang='ar' dir='rtl'>
 <head>
@@ -1449,8 +776,6 @@ namespace PharmacyAPI.Services
             </tbody>
         </table>
 
-       
-
         <!-- TOTAL -->
         <div style='margin-top:24px;background:#f8fafc;
             border-radius:10px;padding:22px;'>
@@ -1483,24 +808,6 @@ namespace PharmacyAPI.Services
 </div>
 </body>
 </html>";
-
-                await _emailService.SendEmailAsync(
-                    "minaromany243@gmail.com",
-                    $"إشعار طلب جديد رقم #{order.Id}",
-                    emailBody);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(
-                    $"Failed to send order email: {ex.Message}");
-            }
-
         }
-
-
-
-
-
-
     }
 }

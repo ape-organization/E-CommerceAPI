@@ -284,21 +284,21 @@ namespace PharmacyAPI.Services
             // Delete all products
             // ---------------------------------------------------------
 
-            if (products.Count > 0)
+            // These entities are already tracked, so EF only writes the
+            // IsDeleted column. (Update()/UpdateRange() forced every
+            // column of every row to be rewritten.)
+            foreach (var product in products)
             {
-                products.ForEach(p => p.IsDeleted = true);
-                _context.Products.UpdateRange(products);
+                product.IsDeleted = true;
             }
 
             // ---------------------------------------------------------
             // Delete all subcategories
             // ---------------------------------------------------------
 
-            if (category.SubCategories.Count > 0)
+            foreach (var subCategory in category.SubCategories)
             {
-                category.SubCategories.ToList().ForEach(sc => sc.IsDeleted = true);
-                _context.SubCategories.UpdateRange(
-                    category.SubCategories);
+                subCategory.IsDeleted = true;
             }
 
             // ---------------------------------------------------------
@@ -306,7 +306,6 @@ namespace PharmacyAPI.Services
             // ---------------------------------------------------------
 
             category.IsDeleted = true;
-            _context.Categories.Update(category);
 
             // ---------------------------------------------------------
             // Save everything to database

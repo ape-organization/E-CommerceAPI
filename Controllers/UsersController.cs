@@ -241,7 +241,7 @@ namespace PharmacyAPI.Controllers
         {
             try
             {
-                return await _context.Users.Where(user => user.IsActive == true).ToListAsync();
+                return await _context.Users.AsNoTracking().Where(user => user.IsActive == true).ToListAsync();
             }
              catch { return Unauthorized(); }
         }
