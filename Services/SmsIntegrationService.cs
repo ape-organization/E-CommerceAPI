@@ -24,6 +24,10 @@ namespace PharmacyAPI.Services
         // This way an older SMS that arrives late still contains a valid code.
         private static readonly TimeSpan MinRemainingToReuse = TimeSpan.FromMinutes(2);
 
+        private const string CostCacheKey = "sms-cost-total";
+        private static readonly TimeSpan CostCacheLifetime = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan CostRequestTimeout = TimeSpan.FromSeconds(15);
+
         private static readonly JsonSerializerOptions JsonOptions =
             new(JsonSerializerDefaults.Web);
 
@@ -293,25 +297,53 @@ namespace PharmacyAPI.Services
         public async Task<SmsCostResponse> getTotalCostAsync(
             CancellationToken cancellationToken = default)
         {
+            // The provider endpoint can be slow, so the result is cached briefly:
+            // dashboard visits don't need a real-time total.
+            if (_cache.TryGetValue(CostCacheKey, out SmsCostResponse? cached)
+                && cached is not null)
+            {
+                return cached;
+            }
+
             var address = _smsApiUrl
                 + "api/sms/sender-names/"
                 + Uri.EscapeDataString(_smsSenderName)
                 + "/sms-part-count-total";
 
-            using var response = await _httpClient.GetAsync(address, cancellationToken);
+            // Fail fast instead of waiting on the HttpClient default (100s),
+            // which is longer than the gateway timeout and ends in a 504.
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(CostRequestTimeout);
 
-            response.EnsureSuccessStatusCode();
-
-            var costResponse = await response.Content
-                .ReadFromJsonAsync<SmsCostResponse>(JsonOptions, cancellationToken);
-
-            if (costResponse == null)
+            try
             {
-                throw new InvalidOperationException(
-                    "Invalid response received from SMS provider.");
-            }
+                using var response = await _httpClient.GetAsync(address, timeoutCts.Token);
 
-            return costResponse;
+                response.EnsureSuccessStatusCode();
+
+                var costResponse = await response.Content
+                    .ReadFromJsonAsync<SmsCostResponse>(JsonOptions, timeoutCts.Token);
+
+                if (costResponse == null)
+                {
+                    throw new InvalidOperationException(
+                        "Invalid response received from SMS provider.");
+                }
+
+                _cache.Set(CostCacheKey, costResponse, CostCacheLifetime);
+
+                return costResponse;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Our timeout fired (not the client disconnecting).
+                _logger.LogWarning(
+                    "SMS provider did not answer the total cost request within {Timeout}s.",
+                    CostRequestTimeout.TotalSeconds);
+
+                throw new TimeoutException(
+                    "SMS provider did not respond in time.");
+            }
         }
 
         // ------------------------------------------------------------------

@@ -121,11 +121,22 @@ namespace PharmacyAPI.Controllers
                 return Ok(new
                 {
                     success = true,
-                    message = "SMS sent successfully.",
+                    message = "SMS total cost retrieved successfully.",
                     data = result
                 });
             }
-            catch (HttpRequestException ex)
+            catch (TimeoutException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status504GatewayTimeout,
+                    new
+                    {
+                        success = false,
+                        message = "SMS provider did not respond in time.",
+                        error = ex.Message
+                    });
+            }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException)
             {
                 return StatusCode(
                     StatusCodes.Status502BadGateway,
